@@ -61,12 +61,12 @@ export const api = {
   },
   integrations: {
     list: () => request<Integration[]>('/integrations'),
-    getMlAuthUrl: () => request<{ url: string }>('/integrations/mercadolivre/auth-url'),
+    getMlAuthUrl: () => request<{ url: string; codeVerifier: string }>('/integrations/mercadolivre/auth-url'),
     getShopeeAuthUrl: () => request<{ url: string }>('/integrations/shopee/auth-url'),
-    handleMlCallback: (code: string, nickname?: string) =>
+    handleMlCallback: (code: string, codeVerifier: string, nickname?: string) =>
       request('/integrations/mercadolivre/callback', {
         method: 'POST',
-        body: JSON.stringify({ code, nickname }),
+        body: JSON.stringify({ code, codeVerifier, nickname }),
       }),
     handleShopeeCallback: (code: string, shop_id: string, nickname?: string) =>
       request('/integrations/shopee/callback', {

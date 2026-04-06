@@ -25,7 +25,15 @@ function MercadoLivreCallback() {
       return;
     }
 
-    api.integrations.handleMlCallback(code)
+    const codeVerifier = sessionStorage.getItem('ml_code_verifier');
+    if (!codeVerifier) {
+      setErrorMessage('Verificador PKCE não encontrado. Tente vincular novamente.');
+      setStatus('error');
+      return;
+    }
+    sessionStorage.removeItem('ml_code_verifier');
+
+    api.integrations.handleMlCallback(code, codeVerifier)
       .then(() => {
         setStatus('success');
         setTimeout(() => router.push('/dashboard/integrations'), 2000);

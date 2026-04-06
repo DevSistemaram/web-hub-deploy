@@ -32,7 +32,8 @@ export default function IntegrationsPage() {
 
   async function connectMercadoLivre() {
     try {
-      const { url } = await api.integrations.getMlAuthUrl();
+      const { url, codeVerifier } = await api.integrations.getMlAuthUrl();
+      sessionStorage.setItem('ml_code_verifier', codeVerifier);
       window.location.href = url;
     } catch { alert('Erro ao obter URL do Mercado Livre'); }
   }
