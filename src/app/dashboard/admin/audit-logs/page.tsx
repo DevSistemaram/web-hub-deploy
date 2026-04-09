@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, RefreshCw, X, ClipboardList, Info } from 'lucide-react';
 import { api, AuditLog, AdminUser } from '@/lib/api';
@@ -91,6 +91,14 @@ function DetailModal({ log, userName, onClose }: { log: AuditLog; userName?: str
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AuditLogsPage() {
+  return (
+    <Suspense>
+      <AuditLogsContent />
+    </Suspense>
+  );
+}
+
+function AuditLogsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
