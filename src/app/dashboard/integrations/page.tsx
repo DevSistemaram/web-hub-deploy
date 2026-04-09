@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Pencil, Check, X, Unplug, Plus, ShoppingCart, ShoppingBag } from 'lucide-react';
 import { api, Integration } from '@/lib/api';
+import { confirm, toastError } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -35,29 +36,29 @@ export default function IntegrationsPage() {
       const { url, codeVerifier } = await api.integrations.getMlAuthUrl();
       sessionStorage.setItem('ml_code_verifier', codeVerifier);
       window.location.href = url;
-    } catch { alert('Erro ao obter URL do Mercado Livre'); }
+    } catch { toastError('Erro ao obter URL do Mercado Livre'); }
   }
 
   async function connectShopee() {
     try {
       const { url } = await api.integrations.getShopeeAuthUrl();
       window.location.href = url;
-    } catch { alert('Erro ao obter URL da Shopee'); }
+    } catch { toastError('Erro ao obter URL da Shopee'); }
   }
 
   async function handleDeactivate(id: string) {
-    if (!confirm('Deseja desconectar esta integração?')) return;
+    if (!await confirm('A integração será desconectada e você precisará reconectar para usá-la novamente.', { title: 'Desconectar integração?', confirmText: 'Desconectar', danger: true })) return;
     try {
       await api.integrations.deactivate(id);
       await loadIntegrations();
-    } catch { alert('Erro ao desconectar'); }
+    } catch { toastError('Erro ao desconectar'); }
   }
 
   async function handleNicknameUpdate(id: string, nickname: string) {
     try {
       await api.integrations.updateNickname(id, nickname);
       setIntegrations((prev) => prev.map((i) => (i.id === id ? { ...i, nickname } : i)));
-    } catch { alert('Erro ao salvar nome'); }
+    } catch { toastError('Erro ao salvar nome'); }
   }
 
   const mlIntegrations = integrations.filter((i) => i.marketplace === 'mercadolivre');

@@ -9,10 +9,12 @@ async function request<T>(
 ): Promise<T> {
   const token = getToken();
 
+  const hasBody = options.body != null;
+
   const response = await fetch(`/api${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -46,18 +48,76 @@ export interface ErpToken {
   scopedIntegrationIds: string[];
 }
 
+export interface Invitation {
+  id: string;
+  token: string;
+  email: string | null;
+  expiresAt: string;
+  usedAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  createdAt: string;
+  integrations: Integration[];
+}
+
+export interface AuditLog {
+  id: string;
+  userId: string | null;
+  impersonatedBy: string | null;
+  action: string;
+  targetId: string | null;
+  targetType: string | null;
+  metadata: Record<string, unknown> | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
 export const api = {
   auth: {
-    register: (data: { name: string; email: string; password: string }) =>
-      request<{ token: string; user: { id: string; name: string; email: string } }>(
+    validateInvite: (token: string) =>
+      request<{ valid: boolean; reason?: string; email?: string | null }>(
+        `/auth/invite/${encodeURIComponent(token)}`,
+      ),
+    register: (data: { name: string; email: string; password: string; inviteToken: string }) =>
+      request<{ token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }>(
         '/auth/register',
         { method: 'POST', body: JSON.stringify(data) },
       ),
     login: (data: { email: string; password: string }) =>
-      request<{ token: string; user: { id: string; name: string; email: string } }>(
+      request<{ token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }>(
         '/auth/login',
         { method: 'POST', body: JSON.stringify(data) },
       ),
+  },
+  admin: {
+    createInvitation: (data: { email?: string; expiresInDays?: number }) =>
+      request<Invitation>('/admin/invitations', { method: 'POST', body: JSON.stringify(data) }),
+    listInvitations: () => request<Invitation[]>('/admin/invitations'),
+    revokeInvitation: (id: string) => request(`/admin/invitations/${id}`, { method: 'DELETE' }),
+    listUsers: () => request<AdminUser[]>('/admin/users'),
+    promoteToAdmin: (id: string) => request<AdminUser>(`/admin/users/${id}/promote`, { method: 'PATCH' }),
+    demoteToUser: (id: string) => request<AdminUser>(`/admin/users/${id}/demote`, { method: 'PATCH' }),
+    impersonate: (id: string) =>
+      request<{ token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }>(
+        `/admin/impersonate/${id}`,
+        { method: 'POST' },
+      ),
+    getAuditLogs: (params?: { userId?: string; screen?: string; search?: string; page?: number; limit?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.userId) qs.set('userId', params.userId);
+      if (params?.screen) qs.set('screen', params.screen);
+      if (params?.search) qs.set('search', params.search);
+      if (params?.page) qs.set('page', String(params.page));
+      if (params?.limit) qs.set('limit', String(params.limit));
+      const query = qs.toString();
+      return request<AuditLog[]>(`/admin/audit-logs${query ? `?${query}` : ''}`);
+    },
   },
   integrations: {
     list: () => request<Integration[]>('/integrations'),
