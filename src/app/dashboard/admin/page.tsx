@@ -5,15 +5,17 @@ import { useRouter } from 'next/navigation';
 import {
   Copy, Trash2, ShieldCheck, ShieldOff, RefreshCw,
   Plus, ShoppingCart, ShoppingBag, UserCheck, Search, ClipboardList,
+  AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
-import { api, Invitation, AdminUser } from '@/lib/api';
+import { api, Invitation, AdminUser, Integration } from '@/lib/api';
 import { isAdmin, startImpersonation, getUser } from '@/lib/auth';
 import { confirm, toastError } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const MARKETPLACE_ICON: Record<string, React.ElementType> = {
   mercadolivre: ShoppingCart,
@@ -24,6 +26,44 @@ const MARKETPLACE_LABEL: Record<string, string> = {
   mercadolivre: 'Mercado Livre',
   shopee: 'Shopee',
 };
+
+function tokenStatus(expiresAt: string | null): { label: string; variant: 'success' | 'warning' | 'destructive' | 'outline' } {
+  if (!expiresAt) return { label: 'Sem data', variant: 'outline' };
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  if (diff < 0) return { label: 'Expirado', variant: 'destructive' };
+  if (diff < 30 * 60 * 1000) return { label: 'Expira em breve', variant: 'warning' };
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 24) return { label: `Expira em ${hours}h`, variant: 'success' };
+  const days = Math.floor(diff / 86400000);
+  return { label: `Expira em ${days}d`, variant: 'success' };
+}
+
+function IntegrationCard({ integration: int }: { integration: Integration }) {
+  const Icon = MARKETPLACE_ICON[int.marketplace] ?? ShoppingCart;
+  const label = int.nickname || `${MARKETPLACE_LABEL[int.marketplace] ?? int.marketplace} · ${int.sellerId ?? int.shopId ?? int.id.slice(0, 8)}`;
+  const tokenSt = tokenStatus(int.tokenExpiresAt);
+
+  return (
+    <div className="flex items-center justify-between gap-3 text-xs bg-muted/40 border border-border rounded-md px-3 py-2">
+      <div className="flex items-center gap-2 min-w-0">
+        <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        <span className="text-foreground font-medium truncate">{label}</span>
+        <span className="text-muted-foreground hidden sm:inline">{int.marketplace === 'shopee' ? `Shop ${int.shopId}` : `Seller ${int.sellerId}`}</span>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <Badge variant={tokenSt.variant} className="text-[10px] py-0 px-1.5">
+          {tokenSt.variant === 'destructive' && <AlertCircle className="w-2.5 h-2.5 mr-0.5" />}
+          {tokenSt.label}
+        </Badge>
+        {int.tokenExpiresAt && (
+          <span className="text-muted-foreground hidden sm:inline" title="Data de expiração do token">
+            {new Date(int.tokenExpiresAt).toLocaleString('pt-BR')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -261,26 +301,28 @@ export default function AdminPage() {
                 </div>
 
                 {/* Integrations */}
-                {u.integrations.length === 0 ? (
-                  <p className="text-xs text-muted-foreground pl-1">Nenhuma integração ativa.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {u.integrations.map((int) => {
-                      const Icon = MARKETPLACE_ICON[int.marketplace] ?? ShoppingCart;
-                      const label = int.nickname || `${MARKETPLACE_LABEL[int.marketplace] ?? int.marketplace} · ${int.sellerId ?? int.shopId ?? int.id.slice(0, 8)}`;
-                      return (
-                        <div
-                          key={int.id}
-                          className="flex items-center gap-1.5 text-xs bg-muted/60 border border-border rounded-md px-2.5 py-1.5"
-                        >
-                          <Icon className="w-3 h-3 text-muted-foreground shrink-0" />
-                          <span className="text-foreground font-medium">{label}</span>
-                          {!int.isActive && <Badge variant="outline" className="text-[10px] py-0 px-1">Inativo</Badge>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                {(() => {
+                  const activeIntegrations = u.integrations.filter((i) => i.isActive);
+                  if (activeIntegrations.length === 0) {
+                    return <p className="text-xs text-muted-foreground pl-1">Nenhuma integração ativa.</p>;
+                  }
+                  return (
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="integrations" className="border rounded-md px-3">
+                        <AccordionTrigger className="py-2 text-xs font-medium hover:no-underline">
+                          Integrações ativas ({activeIntegrations.length})
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-2">
+                          <div className="space-y-2 pt-1">
+                            {activeIntegrations.map((int) => (
+                              <IntegrationCard key={int.id} integration={int} />
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  );
+                })()}
               </CardContent>
             </Card>
           ))}

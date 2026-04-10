@@ -38,6 +38,7 @@ export interface Integration {
   sellerId: string | null;
   isActive: boolean;
   createdAt: string;
+  tokenExpiresAt: string | null;
 }
 
 export interface ErpToken {
