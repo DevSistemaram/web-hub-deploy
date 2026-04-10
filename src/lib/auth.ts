@@ -5,14 +5,25 @@ export interface HubUser {
   role: 'admin' | 'user';
 }
 
+function syncTokenCookie(token: string | null) {
+  if (typeof document === 'undefined') return;
+  if (token) {
+    document.cookie = `hub_token=${token}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
+  } else {
+    document.cookie = 'hub_token=; path=/; max-age=0';
+  }
+}
+
 export function saveToken(token: string, user: HubUser) {
   localStorage.setItem('hub_token', token);
   localStorage.setItem('hub_user', JSON.stringify(user));
+  syncTokenCookie(token);
 }
 
 export function clearToken() {
   localStorage.removeItem('hub_token');
   localStorage.removeItem('hub_user');
+  syncTokenCookie(null);
 }
 
 export function getUser(): HubUser | null {
@@ -40,12 +51,13 @@ export function startImpersonation(token: string, user: HubUser) {
   localStorage.setItem('hub_user_admin', localStorage.getItem('hub_user') ?? '');
   localStorage.setItem('hub_token', token);
   localStorage.setItem('hub_user', JSON.stringify(user));
+  syncTokenCookie(token);
 }
 
 export function stopImpersonation() {
   const adminToken = localStorage.getItem('hub_token_admin');
   const adminUser = localStorage.getItem('hub_user_admin');
-  if (adminToken) localStorage.setItem('hub_token', adminToken);
+  if (adminToken) { localStorage.setItem('hub_token', adminToken); syncTokenCookie(adminToken); }
   if (adminUser) localStorage.setItem('hub_user', adminUser);
   localStorage.removeItem('hub_token_admin');
   localStorage.removeItem('hub_user_admin');
