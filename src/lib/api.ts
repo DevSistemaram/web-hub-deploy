@@ -39,6 +39,7 @@ export interface Integration {
   isActive: boolean;
   createdAt: string;
   tokenExpiresAt: string | null;
+  refreshTokenExpiresAt: string | null;
 }
 
 export interface ErpToken {

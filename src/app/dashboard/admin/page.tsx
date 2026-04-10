@@ -38,29 +38,62 @@ function tokenStatus(expiresAt: string | null): { label: string; variant: 'succe
   return { label: `Expira em ${days}d`, variant: 'success' };
 }
 
-function IntegrationCard({ integration: int }: { integration: Integration }) {
-  const Icon = MARKETPLACE_ICON[int.marketplace] ?? ShoppingCart;
-  const label = int.nickname || `${MARKETPLACE_LABEL[int.marketplace] ?? int.marketplace} · ${int.sellerId ?? int.shopId ?? int.id.slice(0, 8)}`;
-  const tokenSt = tokenStatus(int.tokenExpiresAt);
-
+function TokenBadge({ expiresAt }: { expiresAt: string | null }) {
+  const st = tokenStatus(expiresAt);
   return (
-    <div className="flex items-center justify-between gap-3 text-xs bg-muted/40 border border-border rounded-md px-3 py-2">
-      <div className="flex items-center gap-2 min-w-0">
-        <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-        <span className="text-foreground font-medium truncate">{label}</span>
-        <span className="text-muted-foreground hidden sm:inline">{int.marketplace === 'shopee' ? `Shop ${int.shopId}` : `Seller ${int.sellerId}`}</span>
-      </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        <Badge variant={tokenSt.variant} className="text-[10px] py-0 px-1.5">
-          {tokenSt.variant === 'destructive' && <AlertCircle className="w-2.5 h-2.5 mr-0.5" />}
-          {tokenSt.label}
-        </Badge>
-        {int.tokenExpiresAt && (
-          <span className="text-muted-foreground hidden sm:inline" title="Data de expiração do token">
-            {new Date(int.tokenExpiresAt).toLocaleString('pt-BR')}
-          </span>
-        )}
-      </div>
+    <div className="flex flex-col gap-0.5">
+      <Badge variant={st.variant} className="text-[10px] py-0 px-1.5 w-fit">
+        {st.variant === 'destructive' && <AlertCircle className="w-2.5 h-2.5 mr-0.5" />}
+        {st.label}
+      </Badge>
+      {expiresAt && (
+        <span className="text-[10px] text-muted-foreground">
+          {new Date(expiresAt).toLocaleDateString('pt-BR')} {new Date(expiresAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      )}
+      {!expiresAt && <span className="text-[10px] text-muted-foreground">—</span>}
+    </div>
+  );
+}
+
+function IntegrationTable({ integrations }: { integrations: Integration[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs border-collapse">
+        <thead>
+          <tr className="border-b border-border">
+            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Loja</th>
+            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Marketplace</th>
+            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Access Token</th>
+            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Refresh Token</th>
+          </tr>
+        </thead>
+        <tbody>
+          {integrations.map((int) => {
+            const Icon = MARKETPLACE_ICON[int.marketplace] ?? ShoppingCart;
+            const label = int.nickname || `${int.sellerId ?? int.shopId ?? int.id.slice(0, 8)}`;
+            return (
+              <tr key={int.id} className="border-b border-border/50 last:border-0">
+                <td className="py-2 px-2">
+                  <div className="flex items-center gap-1.5">
+                    <Icon className="w-3 h-3 text-muted-foreground shrink-0" />
+                    <span className="font-medium text-foreground truncate max-w-[120px]">{label}</span>
+                  </div>
+                </td>
+                <td className="py-2 px-2">
+                  <span className="text-muted-foreground">{MARKETPLACE_LABEL[int.marketplace] ?? int.marketplace}</span>
+                </td>
+                <td className="py-2 px-2">
+                  <TokenBadge expiresAt={int.tokenExpiresAt} />
+                </td>
+                <td className="py-2 px-2">
+                  <TokenBadge expiresAt={int.refreshTokenExpiresAt} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -74,6 +107,7 @@ export default function AdminPage() {
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState('');
+  const [showAllUsers, setShowAllUsers] = useState(false);
   const currentUserId = getUser()?.id;
 
   useEffect(() => {
@@ -256,7 +290,7 @@ export default function AdminPage() {
         )}
 
         <div className="space-y-3">
-          {filteredUsers.map((u) => (
+          {(showAllUsers ? filteredUsers : filteredUsers.slice(0, 5)).map((u) => (
             <Card key={u.id}>
               <CardContent className="py-4 space-y-3">
                 {/* User header */}
@@ -313,11 +347,7 @@ export default function AdminPage() {
                           Integrações ativas ({activeIntegrations.length})
                         </AccordionTrigger>
                         <AccordionContent className="pb-2">
-                          <div className="space-y-2 pt-1">
-                            {activeIntegrations.map((int) => (
-                              <IntegrationCard key={int.id} integration={int} />
-                            ))}
-                          </div>
+                          <IntegrationTable integrations={activeIntegrations} />
                         </AccordionContent>
                       </AccordionItem>
                     </Accordion>
@@ -326,6 +356,17 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           ))}
+          {filteredUsers.length > 5 && (
+            <Button
+              variant="ghost" size="sm"
+              className="w-full text-muted-foreground text-xs"
+              onClick={() => setShowAllUsers((v) => !v)}
+            >
+              {showAllUsers
+                ? 'Mostrar menos'
+                : `Ver mais ${filteredUsers.length - 5} conta${filteredUsers.length - 5 > 1 ? 's' : ''}`}
+            </Button>
+          )}
         </div>
       </div>
 
