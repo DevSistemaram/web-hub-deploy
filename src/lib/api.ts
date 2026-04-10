@@ -3,6 +3,8 @@ function getToken(): string | null {
   return localStorage.getItem('hub_token');
 }
 
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? '';
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -11,7 +13,7 @@ async function request<T>(
 
   const hasBody = options.body != null;
 
-  const response = await fetch(`/api${path}`, {
+  const response = await fetch(`${BACKEND}/api${path}`, {
     ...options,
     headers: {
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
