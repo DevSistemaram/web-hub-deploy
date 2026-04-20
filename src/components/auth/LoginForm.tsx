@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { saveToken, isAuthenticated } from '@/lib/auth';
@@ -11,15 +11,17 @@ import { Label } from '@/components/ui/label';
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo') ?? '/dashboard';
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated()) {
-      router.replace('/dashboard');
+      router.replace(returnTo);
     }
-  }, [router]);
+  }, [router, returnTo]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,7 +30,7 @@ export function LoginForm() {
     try {
       const result = await api.auth.login(form);
       saveToken(result.token, result.user);
-      router.push('/dashboard');
+      router.push(returnTo);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Credenciais inválidas');
     } finally {
