@@ -3,6 +3,15 @@ function getToken(): string | null {
   return localStorage.getItem('hub_token');
 }
 
+function redirectToLogin() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('hub_token');
+  localStorage.removeItem('hub_user');
+  document.cookie = 'hub_token=; path=/; max-age=0';
+  const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.href = `/login?returnTo=${returnTo}`;
+}
+
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? '';
 
 async function request<T>(
@@ -21,6 +30,11 @@ async function request<T>(
       ...options.headers,
     },
   });
+
+  if (response.status === 401) {
+    redirectToLogin();
+    throw new Error('Sessão expirada. Faça login novamente.');
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({ message: 'Request failed' }));
@@ -82,6 +96,32 @@ export interface AuditLog {
   createdAt: string;
 }
 
+export interface MarketplaceConfig {
+  id: string;
+  marketplace: 'shopee' | 'mercadolivre';
+  redirectUri: string | null;
+  env: string | null;
+  isConfigured: boolean;
+  updatedAt: string;
+  // Shopee
+  partnerId: string | null;
+  hasPartnerKey: boolean;
+  partnerKeyExpiresAt: string | null;
+  // ML
+  appId: string | null;
+  hasClientSecret: boolean;
+}
+
+export interface UpsertMarketplaceConfigPayload {
+  redirectUri?: string;
+  partnerId?: string;
+  partnerKey?: string;
+  env?: string;
+  partnerKeyExpiresAt?: string;
+  appId?: string;
+  clientSecret?: string;
+}
+
 export const api = {
   auth: {
     validateInvite: (token: string) =>
@@ -122,6 +162,13 @@ export const api = {
       const query = qs.toString();
       return request<AuditLog[]>(`/admin/audit-logs${query ? `?${query}` : ''}`);
     },
+    listMarketplaceConfigs: () =>
+      request<MarketplaceConfig[]>('/admin/marketplace-configs'),
+    upsertMarketplaceConfig: (marketplace: 'shopee' | 'mercadolivre', data: UpsertMarketplaceConfigPayload) =>
+      request<{ success: boolean; marketplace: string; isConfigured: boolean }>(
+        `/admin/marketplace-configs/${marketplace}`,
+        { method: 'PATCH', body: JSON.stringify(data) },
+      ),
   },
   integrations: {
     list: () => request<Integration[]>('/integrations'),

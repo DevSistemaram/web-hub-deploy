@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Copy, Trash2, ShieldCheck, ShieldOff, RefreshCw,
   Plus, ShoppingCart, ShoppingBag, UserCheck, Search, ClipboardList,
-  AlertCircle,
+  AlertCircle, Settings, ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { api, Invitation, AdminUser, Integration } from '@/lib/api';
@@ -369,6 +369,20 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* ── Configuração das APIs ─────────────────────────────────────────── */}
+      <Link href="/dashboard/admin/marketplace-configs">
+        <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
+          <CardContent className="py-4 flex items-center gap-3">
+            <Settings className="w-5 h-5 text-muted-foreground shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Configuração das APIs</p>
+              <p className="text-xs text-muted-foreground">Credenciais da Shopee e Mercado Livre</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* ── Histórico de convites ──────────────────────────────────────────── */}
       {usedOrExpired.length > 0 && (
