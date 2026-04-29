@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Network } from 'lucide-react';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,11 +12,13 @@ export default function RegisterPage() {
             <Network className="w-7 h-7 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Criar conta no Hub RAM</h1>
-          <p className="text-muted-foreground text-sm mt-1">Comece a integrar seus marketplaces</p>
+          <p className="text-muted-foreground text-sm mt-1">Acesso por convite</p>
         </div>
         <Card>
           <CardContent className="pt-6">
-            <RegisterForm />
+            <Suspense fallback={<div className="h-40" />}>
+              <RegisterForm />
+            </Suspense>
           </CardContent>
         </Card>
       </div>

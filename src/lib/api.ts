@@ -3,20 +3,38 @@ function getToken(): string | null {
   return localStorage.getItem('hub_token');
 }
 
+function redirectToLogin() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('hub_token');
+  localStorage.removeItem('hub_user');
+  document.cookie = 'hub_token=; path=/; max-age=0';
+  const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.href = `/login?returnTo=${returnTo}`;
+}
+
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? '';
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
   const token = getToken();
 
-  const response = await fetch(`/api${path}`, {
+  const hasBody = options.body != null;
+
+  const response = await fetch(`${BACKEND}/api${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   });
+
+  if (response.status === 401) {
+    redirectToLogin();
+    throw new Error('Sessão expirada. Faça login novamente.');
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({ message: 'Request failed' }));
@@ -34,6 +52,8 @@ export interface Integration {
   sellerId: string | null;
   isActive: boolean;
   createdAt: string;
+  tokenExpiresAt: string | null;
+  refreshTokenExpiresAt: string | null;
 }
 
 export interface ErpToken {
@@ -46,17 +66,108 @@ export interface ErpToken {
   scopedIntegrationIds: string[];
 }
 
+export interface Invitation {
+  id: string;
+  token: string;
+  email: string | null;
+  expiresAt: string;
+  usedAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  createdAt: string;
+  integrations: Integration[];
+}
+
+export interface AuditLog {
+  id: string;
+  userId: string | null;
+  impersonatedBy: string | null;
+  action: string;
+  targetId: string | null;
+  targetType: string | null;
+  metadata: Record<string, unknown> | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+export interface MarketplaceConfig {
+  id: string;
+  marketplace: 'shopee' | 'mercadolivre';
+  redirectUri: string | null;
+  env: string | null;
+  isConfigured: boolean;
+  updatedAt: string;
+  // Shopee
+  partnerId: string | null;
+  hasPartnerKey: boolean;
+  partnerKeyExpiresAt: string | null;
+  // ML
+  appId: string | null;
+  hasClientSecret: boolean;
+}
+
+export interface UpsertMarketplaceConfigPayload {
+  redirectUri?: string;
+  partnerId?: string;
+  partnerKey?: string;
+  env?: string;
+  partnerKeyExpiresAt?: string;
+  appId?: string;
+  clientSecret?: string;
+}
+
 export const api = {
   auth: {
-    register: (data: { name: string; email: string; password: string }) =>
-      request<{ token: string; user: { id: string; name: string; email: string } }>(
+    validateInvite: (token: string) =>
+      request<{ valid: boolean; reason?: string; email?: string | null }>(
+        `/auth/invite/${encodeURIComponent(token)}`,
+      ),
+    register: (data: { name: string; email: string; password: string; inviteToken: string }) =>
+      request<{ token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }>(
         '/auth/register',
         { method: 'POST', body: JSON.stringify(data) },
       ),
     login: (data: { email: string; password: string }) =>
-      request<{ token: string; user: { id: string; name: string; email: string } }>(
+      request<{ token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }>(
         '/auth/login',
         { method: 'POST', body: JSON.stringify(data) },
+      ),
+  },
+  admin: {
+    createInvitation: (data: { email?: string; expiresInDays?: number }) =>
+      request<Invitation>('/admin/invitations', { method: 'POST', body: JSON.stringify(data) }),
+    listInvitations: () => request<Invitation[]>('/admin/invitations'),
+    revokeInvitation: (id: string) => request(`/admin/invitations/${id}`, { method: 'DELETE' }),
+    listUsers: () => request<AdminUser[]>('/admin/users'),
+    promoteToAdmin: (id: string) => request<AdminUser>(`/admin/users/${id}/promote`, { method: 'PATCH' }),
+    demoteToUser: (id: string) => request<AdminUser>(`/admin/users/${id}/demote`, { method: 'PATCH' }),
+    impersonate: (id: string) =>
+      request<{ token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }>(
+        `/admin/impersonate/${id}`,
+        { method: 'POST' },
+      ),
+    getAuditLogs: (params?: { userId?: string; screen?: string; search?: string; page?: number; limit?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.userId) qs.set('userId', params.userId);
+      if (params?.screen) qs.set('screen', params.screen);
+      if (params?.search) qs.set('search', params.search);
+      if (params?.page) qs.set('page', String(params.page));
+      if (params?.limit) qs.set('limit', String(params.limit));
+      const query = qs.toString();
+      return request<AuditLog[]>(`/admin/audit-logs${query ? `?${query}` : ''}`);
+    },
+    listMarketplaceConfigs: () =>
+      request<MarketplaceConfig[]>('/admin/marketplace-configs'),
+    upsertMarketplaceConfig: (marketplace: 'shopee' | 'mercadolivre', data: UpsertMarketplaceConfigPayload) =>
+      request<{ success: boolean; marketplace: string; isConfigured: boolean }>(
+        `/admin/marketplace-configs/${marketplace}`,
+        { method: 'PATCH', body: JSON.stringify(data) },
       ),
   },
   integrations: {

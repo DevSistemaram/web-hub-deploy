@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Network } from 'lucide-react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,7 +16,9 @@ export default function LoginPage() {
         </div>
         <Card>
           <CardContent className="pt-6">
-            <LoginForm />
+            <Suspense fallback={null}>
+              <LoginForm />
+            </Suspense>
           </CardContent>
         </Card>
       </div>

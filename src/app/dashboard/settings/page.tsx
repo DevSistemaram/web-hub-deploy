@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Copy, Plus, KeyRound, ShoppingCart, ShoppingBag } from 'lucide-react';
 import { api, Integration, ErpToken } from '@/lib/api';
+import { toastError, toastInfo } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -52,7 +53,7 @@ export default function SettingsPage() {
       setNewToken(result.token);
       setSelectedIntegrationIds([]);
       await loadData();
-    } catch { alert('Erro ao gerar token'); }
+    } catch { toastError('Erro ao gerar token'); }
     finally { setGenerating(false); }
   }
 
@@ -60,7 +61,7 @@ export default function SettingsPage() {
     try {
       await api.settings.revokeErpToken(id);
       await loadData();
-    } catch { alert('Erro ao revogar token'); }
+    } catch { toastError('Erro ao revogar token'); }
   }
 
   function getIntegrationLabel(integration: Integration) {
@@ -91,7 +92,7 @@ export default function SettingsPage() {
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() => { navigator.clipboard.writeText(newToken); alert('Copiado!'); }}
+                onClick={() => { navigator.clipboard.writeText(newToken); toastInfo('Token copiado!'); }}
                 className="shrink-0 border-green-300"
               >
                 <Copy className="w-4 h-4" />
