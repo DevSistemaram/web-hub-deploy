@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Link2, KeyRound, FileText, LogOut, Network, ShieldCheck, UserX, ClipboardList } from 'lucide-react';
+import Image from 'next/image';
+import { LayoutDashboard, Link2, KeyRound, FileText, LogOut, ShieldCheck, UserX, ClipboardList } from 'lucide-react';
 import { isAuthenticated, getUser, clearToken, isAdmin, isImpersonating, stopImpersonation } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -71,9 +72,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           impersonating ? 'top-10 bottom-0' : 'inset-y-0',
         )}
       >
-        <div className="h-16 flex items-center gap-2.5 px-6 border-b border-border">
-          <Network className="w-5 h-5 text-primary" />
-          <span className="text-base font-bold text-foreground tracking-tight">Hub RAM</span>
+        <div className="h-16 flex items-center px-6 border-b border-border">
+          <Image src="/RAMHub.svg" alt="Hub RAM" width={120} height={32} className="h-8 w-auto" />
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
