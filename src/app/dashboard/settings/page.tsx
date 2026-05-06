@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const MARKETPLACE_ICON: Record<string, React.ElementType> = {
   mercadolivre: ShoppingCart,
@@ -77,23 +78,23 @@ export default function SettingsPage() {
       </p>
 
       {newToken && (
-        <Card className="mb-6 border-green-200 bg-green-50">
+        <Card className="mb-6 border-success/30 bg-success/10">
           <CardHeader className="pb-3">
-            <CardTitle className="text-green-800 text-base">Token gerado com sucesso!</CardTitle>
-            <CardDescription className="text-green-700">
+            <CardTitle className="text-success text-base">Token gerado com sucesso!</CardTitle>
+            <CardDescription className="text-success/80">
               Copie agora — este token completo não será exibido novamente.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <code className="flex-1 bg-white border border-green-200 rounded-md p-3 text-xs font-mono break-all text-foreground">
+              <code className="flex-1 bg-card border border-success/20 rounded-md p-3 text-xs font-mono break-all text-foreground">
                 {newToken}
               </code>
               <Button
                 size="icon"
                 variant="outline"
                 onClick={() => { navigator.clipboard.writeText(newToken); toastInfo('Token copiado!'); }}
-                className="shrink-0 border-green-300"
+                className="shrink-0 border-success/40"
               >
                 <Copy className="w-4 h-4" />
               </Button>
@@ -118,11 +119,9 @@ export default function SettingsPage() {
                   key={integration.id}
                   className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-muted cursor-pointer transition-colors"
                 >
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedIntegrationIds.includes(integration.id)}
-                    onChange={() => toggleIntegration(integration.id)}
-                    className="h-4 w-4 rounded accent-primary"
+                    onCheckedChange={() => toggleIntegration(integration.id)}
                   />
                   <Icon className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm font-medium">{getIntegrationLabel(integration)}</span>
