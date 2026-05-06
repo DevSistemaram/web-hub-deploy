@@ -70,13 +70,16 @@ export function RegisterForm() {
   if (invite.status === 'invalid') {
     return (
       <div className="text-center space-y-3 py-4">
-        <p className="text-sm text-destructive font-medium">{invite.reason}</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-g text-destructive font-medium">{invite.reason}</p>
+        <p className="text-m text-muted-foreground">
           Solicite um novo convite ao administrador do sistema.
         </p>
-        <Link href="/login" className="text-sm text-primary hover:underline font-medium">
-          Já tem conta? Entrar
-        </Link>
+        <p className="text-center text-sm text-muted-foreground">
+          Já tem conta?{' '}
+          <Link href="/login" className="text-primary hover:underline font-medium">
+            Entrar
+          </Link>
+        </p>
       </div>
     );
   }
