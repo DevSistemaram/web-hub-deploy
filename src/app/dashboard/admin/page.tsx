@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Copy, Trash2, ShieldCheck, ShieldOff, RefreshCw,
   Plus, ShoppingCart, ShoppingBag, UserCheck, Search, ClipboardList,
-  AlertCircle,
+  AlertCircle, Users, Mail, History, ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { api, Invitation, AdminUser, Integration } from '@/lib/api';
@@ -15,7 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { cn } from '@/lib/utils';
+
+type AdminTab = 'users' | 'invites';
 
 const MARKETPLACE_ICON: Record<string, React.ElementType> = {
   mercadolivre: ShoppingCart,
@@ -83,12 +87,8 @@ function IntegrationTable({ integrations }: { integrations: Integration[] }) {
                 <td className="py-2 px-2">
                   <span className="text-muted-foreground">{MARKETPLACE_LABEL[int.marketplace] ?? int.marketplace}</span>
                 </td>
-                <td className="py-2 px-2">
-                  <TokenBadge expiresAt={int.tokenExpiresAt} />
-                </td>
-                <td className="py-2 px-2">
-                  <TokenBadge expiresAt={int.refreshTokenExpiresAt} />
-                </td>
+                <td className="py-2 px-2"><TokenBadge expiresAt={int.tokenExpiresAt} /></td>
+                <td className="py-2 px-2"><TokenBadge expiresAt={int.refreshTokenExpiresAt} /></td>
               </tr>
             );
           })}
@@ -98,8 +98,91 @@ function IntegrationTable({ integrations }: { integrations: Integration[] }) {
   );
 }
 
+function UserAvatar({ name }: { name: string }) {
+  const initials = name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+  return (
+    <div className="w-9 h-9 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center shrink-0 select-none border border-primary/20">
+      {initials}
+    </div>
+  );
+}
+
+function IconButton({
+  onClick, title, icon: Icon, variant = 'default', disabled,
+}: {
+  onClick: () => void;
+  title: string;
+  icon: React.ElementType;
+  variant?: 'default' | 'destructive' | 'promote';
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+      className={cn(
+        'w-8 h-8 rounded-md flex items-center justify-center transition-colors shrink-0 border',
+        variant === 'default' && 'text-muted-foreground border-border hover:bg-accent hover:text-foreground',
+        variant === 'destructive' && 'text-destructive border-destructive/20 hover:bg-destructive/10',
+        variant === 'promote' && 'text-primary border-primary/20 hover:bg-primary/10',
+        disabled && 'opacity-40 pointer-events-none',
+      )}
+    >
+      <Icon className="w-3.5 h-3.5" />
+    </button>
+  );
+}
+
+function TabButton({
+  active, onClick, label, count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count?: number;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+        active
+          ? 'border-primary text-foreground'
+          : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+      )}
+    >
+      {label}
+      {count !== undefined && (
+        <Badge
+          variant={active ? 'default' : 'secondary'}
+          className="text-[10px] px-1.5 py-0 h-4 min-w-4"
+        >
+          {count}
+        </Badge>
+      )}
+    </button>
+  );
+}
+
+function AdminSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-8 w-24" />
+      </div>
+      <Skeleton className="h-10 w-64" />
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const router = useRouter();
+  const [tab, setTab] = useState<AdminTab>('users');
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,7 +240,7 @@ export default function AdminPage() {
       if (!await confirm(`${user.name} perderá acesso à área admin.`, { title: 'Rebaixar a usuário?', confirmText: 'Rebaixar', danger: true })) return;
       await api.admin.demoteToUser(user.id);
     } else {
-      if (!await confirm(`${user.name} terá acesso total à área admin.`, { title: 'Promover a admin?' , confirmText: 'Promover' })) return;
+      if (!await confirm(`${user.name} terá acesso total à área admin.`, { title: 'Promover a admin?', confirmText: 'Promover' })) return;
       await api.admin.promoteToAdmin(user.id);
     }
     await loadAll();
@@ -175,7 +258,7 @@ export default function AdminPage() {
     }
   }
 
-  if (loading) return <div className="text-muted-foreground text-sm">Carregando...</div>;
+  if (loading) return <AdminSkeleton />;
 
   const activeInvites = invitations.filter((i) => !i.usedAt && new Date(i.expiresAt) > new Date());
   const usedOrExpired = invitations.filter((i) => i.usedAt || new Date(i.expiresAt) <= new Date());
@@ -183,209 +266,257 @@ export default function AdminPage() {
   const filteredUsers = userSearch.trim()
     ? users.filter((u) => {
         const q = userSearch.toLowerCase();
-        return (
-          u.name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q)
-        );
+        return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
       })
     : users;
 
+  const visibleUsers = showAllUsers ? filteredUsers : filteredUsers.slice(0, 5);
+
   return (
-    <div className="max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground mb-1">Administração</h1>
-        <p className="text-muted-foreground text-sm">Gerencie convites, usuários e integrações.</p>
+    <div className="max-w-3xl space-y-6">
+
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Administração</h1>
+          <p className="text-muted-foreground text-sm">Gerencie convites e usuários do sistema.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={loadAll}>
+          <RefreshCw className="w-3.5 h-3.5" />
+          Atualizar
+        </Button>
       </div>
 
-      {/* ── Criar convite ─────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Novo Convite</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreateInvite} className="flex gap-2">
-            <Input
-              type="email"
-              placeholder="E-mail (opcional — convite aberto se vazio)"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" disabled={creating}>
-              <Plus className="w-4 h-4" />
-              {creating ? 'Criando...' : 'Criar'}
-            </Button>
-          </form>
-          <p className="text-xs text-muted-foreground mt-2">Validade: 7 dias.</p>
-        </CardContent>
-      </Card>
-
-      {/* ── Convites ativos ───────────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-foreground">
-            Convites ativos
-            {activeInvites.length > 0 && <Badge variant="success" className="ml-2">{activeInvites.length}</Badge>}
-          </h2>
-          <Button variant="ghost" size="sm" onClick={loadAll}><RefreshCw className="w-3.5 h-3.5" /></Button>
+      {/* ── Tabs ──────────────────────────────────────────────────────────── */}
+      <div className="border-b border-border">
+        <div className="flex">
+          <TabButton
+            active={tab === 'users'}
+            onClick={() => setTab('users')}
+            label="Usuários"
+            count={users.length}
+          />
+          <TabButton
+            active={tab === 'invites'}
+            onClick={() => setTab('invites')}
+            label="Convites"
+            count={activeInvites.length}
+          />
         </div>
+      </div>
 
-        {activeInvites.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="py-6 text-center text-sm text-muted-foreground">Nenhum convite ativo.</CardContent>
-          </Card>
-        ) : (
+      {/* ── Tab: Usuários ─────────────────────────────────────────────────── */}
+      {tab === 'users' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {users.length} conta{users.length !== 1 ? 's' : ''} registrada{users.length !== 1 ? 's' : ''}
+            </p>
+            <div className="relative w-56">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                placeholder="Buscar por nome ou e-mail"
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+          </div>
+
+          {filteredUsers.length === 0 && userSearch && (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Nenhuma conta para &ldquo;{userSearch}&rdquo;
+            </p>
+          )}
+
           <div className="space-y-2">
-            {activeInvites.map((inv) => (
-              <Card key={inv.id}>
-                <CardContent className="py-3 flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {inv.email ?? <span className="italic text-muted-foreground">Convite aberto</span>}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Expira em {new Date(inv.expiresAt).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="outline" onClick={() => copyInviteLink(inv.token, inv.id)}>
-                      <Copy className="w-3.5 h-3.5" />
-                      {copiedId === inv.id ? 'Copiado!' : 'Copiar link'}
-                    </Button>
-                    <Button
-                      size="icon" variant="outline" onClick={() => handleRevoke(inv.id)}
-                      className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
+            {visibleUsers.map((u) => {
+              const activeIntegrations = u.integrations.filter((i) => i.isActive);
+              return (
+                <Card key={u.id}>
+                  <CardContent className="py-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <UserAvatar name={u.name} />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold text-foreground">{u.name}</span>
+                          <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="text-[10px]">
+                            {u.role === 'admin' ? 'Admin' : 'Usuário'}
+                          </Badge>
+                          {activeIntegrations.length > 0 && (
+                            <Badge variant="muted" className="text-[10px]">
+                              {activeIntegrations.length} integração{activeIntegrations.length !== 1 ? 'ões' : ''}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                      </div>
+
+                      <div className="flex gap-1 shrink-0">
+                        <Link href={`/dashboard/admin/audit-logs?userId=${u.id}`}>
+                          <IconButton icon={ClipboardList} title="Ver logs deste usuário" onClick={() => {}} />
+                        </Link>
+                        <IconButton
+                          icon={UserCheck}
+                          title="Personificar este usuário"
+                          onClick={() => handleImpersonate(u)}
+                        />
+                        {u.id !== currentUserId && (
+                          <IconButton
+                            icon={u.role === 'admin' ? ShieldOff : ShieldCheck}
+                            title={u.role === 'admin' ? 'Rebaixar a usuário' : 'Promover a admin'}
+                            variant={u.role === 'admin' ? 'destructive' : 'promote'}
+                            onClick={() => handleToggleRole(u)}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {activeIntegrations.length > 0 && (
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="integrations" className="border rounded-md px-3">
+                          <AccordionTrigger className="py-2 text-xs font-medium hover:no-underline">
+                            <span className="flex items-center gap-1.5">
+                              <ChevronDown className="w-3.5 h-3.5 shrink-0 transition-transform duration-200" />
+                              Integrações ativas ({activeIntegrations.length})
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-2">
+                            <IntegrationTable integrations={activeIntegrations} />
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    )}
+
+                    {activeIntegrations.length === 0 && (
+                      <p className="text-xs text-muted-foreground pl-1">Nenhuma integração ativa.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            {filteredUsers.length > 5 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-muted-foreground text-xs"
+                onClick={() => setShowAllUsers((v) => !v)}
+              >
+                {showAllUsers
+                  ? 'Mostrar menos'
+                  : `Ver mais ${filteredUsers.length - 5} conta${filteredUsers.length - 5 !== 1 ? 's' : ''}`}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab: Convites ─────────────────────────────────────────────────── */}
+      {tab === 'invites' && (
+        <div className="space-y-6">
+
+          {/* Criar convite */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+                Novo Convite
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateInvite} className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="E-mail (opcional — convite aberto se vazio)"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="flex-1"
+                />
+                <Button type="submit" disabled={creating}>
+                  <Plus className="w-4 h-4" />
+                  {creating ? 'Criando...' : 'Criar'}
+                </Button>
+              </form>
+              <p className="text-xs text-muted-foreground mt-2">Validade: 7 dias.</p>
+            </CardContent>
+          </Card>
+
+          {/* Convites ativos */}
+          <div>
+            <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              Ativos
+              {activeInvites.length > 0 && <Badge variant="success">{activeInvites.length}</Badge>}
+            </h2>
+
+            {activeInvites.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                  Nenhum convite ativo.
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Contas e integrações ──────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <h2 className="text-base font-semibold text-foreground">
-            Contas ({users.length})
-          </h2>
-          <div className="relative w-56">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-            <Input
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-              placeholder="Buscar por nome ou e-mail"
-              className="pl-8 h-8 text-sm"
-            />
-          </div>
-        </div>
-
-        {filteredUsers.length === 0 && userSearch && (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            Nenhuma conta encontrada para &ldquo;{userSearch}&rdquo;
-          </p>
-        )}
-
-        <div className="space-y-3">
-          {(showAllUsers ? filteredUsers : filteredUsers.slice(0, 5)).map((u) => (
-            <Card key={u.id}>
-              <CardContent className="py-4 space-y-3">
-                {/* User header */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">{u.name}</span>
-                      <Badge variant={u.role === 'admin' ? 'default' : 'secondary'}>
-                        {u.role === 'admin' ? 'Admin' : 'Usuário'}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{u.email}</p>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <Link href={`/dashboard/admin/audit-logs?userId=${u.id}`}>
-                      <Button size="sm" variant="outline" title="Ver logs deste usuário">
-                        <ClipboardList className="w-3.5 h-3.5" />
-                        Logs
-                      </Button>
-                    </Link>
-                    <Button
-                      size="sm" variant="outline"
-                      onClick={() => handleImpersonate(u)}
-                      title="Personificar este usuário"
-                    >
-                      <UserCheck className="w-3.5 h-3.5" />
-                      Personificar
-                    </Button>
-                    {u.id !== currentUserId && (
-                      <Button
-                        size="sm" variant="outline"
-                        onClick={() => handleToggleRole(u)}
-                        title={u.role === 'admin' ? 'Rebaixar a usuário' : 'Promover a admin'}
-                      >
-                        {u.role === 'admin'
-                          ? <><ShieldOff className="w-3.5 h-3.5" /> Rebaixar</>
-                          : <><ShieldCheck className="w-3.5 h-3.5" /> Promover</>
-                        }
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Integrations */}
-                {(() => {
-                  const activeIntegrations = u.integrations.filter((i) => i.isActive);
-                  if (activeIntegrations.length === 0) {
-                    return <p className="text-xs text-muted-foreground pl-1">Nenhuma integração ativa.</p>;
-                  }
-                  return (
-                    <Accordion type="single" collapsible className="w-full">
-                      <AccordionItem value="integrations" className="border rounded-md px-3">
-                        <AccordionTrigger className="py-2 text-xs font-medium hover:no-underline">
-                          Integrações ativas ({activeIntegrations.length})
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-2">
-                          <IntegrationTable integrations={activeIntegrations} />
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  );
-                })()}
-              </CardContent>
-            </Card>
-          ))}
-          {filteredUsers.length > 5 && (
-            <Button
-              variant="ghost" size="sm"
-              className="w-full text-muted-foreground text-xs"
-              onClick={() => setShowAllUsers((v) => !v)}
-            >
-              {showAllUsers
-                ? 'Mostrar menos'
-                : `Ver mais ${filteredUsers.length - 5} conta${filteredUsers.length - 5 > 1 ? 's' : ''}`}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Histórico de convites ──────────────────────────────────────────── */}
-      {usedOrExpired.length > 0 && (
-        <div>
-          <h2 className="text-sm font-medium text-muted-foreground mb-2">
-            Histórico ({usedOrExpired.length} usados/expirados)
-          </h2>
-          <div className="space-y-1.5">
-            {usedOrExpired.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between px-3 py-2 rounded-md bg-muted/40 text-sm text-muted-foreground">
-                <span>{inv.email ?? 'Convite aberto'}</span>
-                <Badge variant={inv.usedAt ? 'secondary' : 'outline'}>
-                  {inv.usedAt ? 'Usado' : 'Expirado'}
-                </Badge>
+            ) : (
+              <div className="space-y-2">
+                {activeInvites.map((inv) => (
+                  <Card key={inv.id}>
+                    <CardContent className="py-3 flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {inv.email ?? <span className="italic text-muted-foreground font-normal">Convite aberto</span>}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Expira em {new Date(inv.expiresAt).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                        <Button size="sm" variant="outline" onClick={() => copyInviteLink(inv.token, inv.id)}>
+                          <Copy className="w-3.5 h-3.5" />
+                          {copiedId === inv.id ? 'Copiado!' : 'Copiar link'}
+                        </Button>
+                        <IconButton
+                          icon={Trash2}
+                          title="Revogar convite"
+                          variant="destructive"
+                          onClick={() => handleRevoke(inv.id)}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            ))}
+            )}
           </div>
+
+          {/* Histórico */}
+          {usedOrExpired.length > 0 && (
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="history" className="border rounded-xl px-4">
+                <AccordionTrigger className="py-3 hover:no-underline">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <History className="w-4 h-4" />
+                    Histórico
+                    <Badge variant="secondary" className="text-[10px]">{usedOrExpired.length}</Badge>
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-3">
+                  <div className="space-y-1.5">
+                    {usedOrExpired.map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="flex items-center justify-between px-3 py-2 rounded-md bg-muted/40 text-xs text-muted-foreground"
+                      >
+                        <span>{inv.email ?? 'Convite aberto'}</span>
+                        <Badge variant={inv.usedAt ? 'secondary' : 'outline'} className="text-[10px]">
+                          {inv.usedAt ? 'Usado' : 'Expirado'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
         </div>
       )}
     </div>
