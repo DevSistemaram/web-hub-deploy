@@ -73,15 +73,20 @@ function StatusCard({ title, icon: Icon, count, loading }: {
   return (
     <Card>
       <CardContent className="pt-5 pb-5">
-        <Icon className="w-5 h-5 text-muted-foreground mb-2" />
-        <p className="font-semibold text-foreground text-sm">{title}</p>
+        <div className="flex items-center justify-between mb-3">
+          <Icon className="w-5 h-5 text-primary" />
+          {!loading && (
+            <Badge variant={count > 0 ? 'success' : 'muted'}>
+              {count > 0 ? `${count === 1 ? 'loja' : 'lojas'}` : 'Inativo'}
+            </Badge>
+          )}
+        </div>
         {loading ? (
-          <Skeleton className="mt-2 h-5 w-24" />
+          <Skeleton className="h-8 w-12 mb-1" />
         ) : (
-          <Badge variant={count > 0 ? 'success' : 'muted'} className="mt-2">
-            {count > 0 ? `${count} ${count === 1 ? 'loja' : 'lojas'}` : 'Não conectado'}
-          </Badge>
+          <p className="text-3xl font-bold text-foreground">{count}</p>
         )}
+        <p className="text-sm text-muted-foreground mt-0.5">{title}</p>
       </CardContent>
     </Card>
   );
