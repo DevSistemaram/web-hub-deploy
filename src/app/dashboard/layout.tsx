@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { LayoutDashboard, Link2, KeyRound, FileText, LogOut, ShieldCheck, UserX, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Link2, KeyRound, FileText, LogOut, ShieldCheck, UserX, ClipboardList, SlidersHorizontal } from 'lucide-react';
 import { isAuthenticated, getUser, clearToken, isAdmin, isImpersonating, stopImpersonation } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -118,6 +118,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               >
                 <ClipboardList className="w-4 h-4 shrink-0" />
                 Audit Log
+              </Link>
+              <Link
+                href="/dashboard/admin/marketplace-configs"
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                  pathname.startsWith('/dashboard/admin/marketplace-configs')
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                )}
+              >
+                <SlidersHorizontal className="w-4 h-4 shrink-0" />
+                Config. APIs
               </Link>
             </>
           )}
