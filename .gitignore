@@ -26,3 +26,11 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# package-lock (project uses yarn)
+package-lock.json
+
+# Playwright
+playwright-report/
+test-results/
+playwright/.cache/
