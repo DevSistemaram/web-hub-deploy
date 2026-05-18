@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Copy, Trash2, ShieldCheck, ShieldOff, RefreshCw,
   Plus, ShoppingCart, ShoppingBag, UserCheck, Search, ClipboardList,
-  AlertCircle, Users, Mail, History, ChevronDown,
+  AlertCircle, Users, Mail, History, ChevronDown, Info, X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { api, Invitation, AdminUser, Integration } from '@/lib/api';
+import { api, Invitation, AdminUser, Integration, ShopeeShopInfo, ShopeeBrOnboardingInfo } from '@/lib/api';
 import { isAdmin, startImpersonation, getUser } from '@/lib/auth';
 import { confirm, toastError } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
@@ -60,41 +60,207 @@ function TokenBadge({ expiresAt }: { expiresAt: string | null }) {
   );
 }
 
-function IntegrationTable({ integrations }: { integrations: Integration[] }) {
+type ShopeeModalTab = 'info' | 'onboarding';
+
+interface ShopeeModalEntry {
+  id: string;
+  label: string;
+  info: ShopeeShopInfo;
+  onboarding: ShopeeBrOnboardingInfo | null;
+  onboardingError: string | null;
+}
+
+function ShopeeJsonModal({ entry, onClose }: { entry: ShopeeModalEntry; onClose: () => void }) {
+  const [tab, setTab] = useState<ShopeeModalTab>('info');
+  const [copied, setCopied] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const activeJson = tab === 'info'
+    ? JSON.stringify(entry.info, null, 2)
+    : entry.onboarding
+      ? JSON.stringify(entry.onboarding, null, 2)
+      : null;
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  function handleCopy() {
+    if (!activeJson) return;
+    navigator.clipboard.writeText(activeJson);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  const TABS: { key: ShopeeModalTab; label: string; endpoint: string }[] = [
+    { key: 'info', label: 'Loja', endpoint: 'get_shop_info' },
+    { key: 'onboarding', label: 'KYC BR', endpoint: 'get_br_shop_onboarding_info' },
+  ];
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs border-collapse">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Loja</th>
-            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Marketplace</th>
-            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Access Token</th>
-            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Refresh Token</th>
-          </tr>
-        </thead>
-        <tbody>
-          {integrations.map((int) => {
-            const Icon = MARKETPLACE_ICON[int.marketplace] ?? ShoppingCart;
-            const label = int.nickname || `${int.sellerId ?? int.shopId ?? int.id.slice(0, 8)}`;
-            return (
-              <tr key={int.id} className="border-b border-border/50 last:border-0">
-                <td className="py-2 px-2">
-                  <div className="flex items-center gap-1.5">
-                    <Icon className="w-3 h-3 text-muted-foreground shrink-0" />
-                    <span className="font-medium text-foreground truncate max-w-[120px]">{label}</span>
-                  </div>
-                </td>
-                <td className="py-2 px-2">
-                  <span className="text-muted-foreground">{MARKETPLACE_LABEL[int.marketplace] ?? int.marketplace}</span>
-                </td>
-                <td className="py-2 px-2"><TokenBadge expiresAt={int.tokenExpiresAt} /></td>
-                <td className="py-2 px-2"><TokenBadge expiresAt={int.refreshTokenExpiresAt} /></td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={(e) => { if (!dialogRef.current?.contains(e.target as Node)) onClose(); }}
+    >
+      <div
+        ref={dialogRef}
+        className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+      >
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4 text-muted-foreground" />
+            <span className="font-semibold text-sm text-foreground">{entry.label}</span>
+            <span className="text-xs text-muted-foreground">— {TABS.find((t) => t.key === tab)?.endpoint}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {activeJson && (
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 px-2 py-1 rounded border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <Copy className="w-3 h-3" />
+                {copied ? 'Copiado!' : 'Copiar'}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="w-7 h-7 flex items-center justify-center rounded border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Tabs ── */}
+        <div className="flex border-b border-border shrink-0">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => { setTab(t.key); setCopied(false); }}
+              className={cn(
+                'px-4 py-2 text-xs font-medium border-b-2 -mb-px transition-colors',
+                tab === t.key
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Content ── */}
+        <div className="overflow-y-auto flex-1 p-4">
+          {activeJson ? (
+            <pre className="text-xs font-mono text-foreground whitespace-pre-wrap break-words leading-relaxed">
+              {activeJson}
+            </pre>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              {entry.onboardingError ?? 'Dados não disponíveis para esta loja.'}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
+  );
+}
+
+function IntegrationTable({ integrations }: { integrations: Integration[] }) {
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [modalEntry, setModalEntry] = useState<ShopeeModalEntry | null>(null);
+  const [cache, setCache] = useState<Record<string, ShopeeModalEntry>>({});
+
+  async function handleShopeeInfo(id: string, label: string) {
+    if (cache[id]) { setModalEntry(cache[id]); return; }
+    setLoadingId(id);
+    try {
+      const [infoResult, onboardingResult] = await Promise.allSettled([
+        api.admin.getShopeeInfo(id),
+        api.admin.getShopeeOnboarding(id),
+      ]);
+
+      if (infoResult.status === 'rejected') {
+        throw infoResult.reason instanceof Error ? infoResult.reason : new Error('Erro ao buscar info da loja');
+      }
+
+      const entry: ShopeeModalEntry = {
+        id,
+        label,
+        info: infoResult.value,
+        onboarding: onboardingResult.status === 'fulfilled' ? onboardingResult.value : null,
+        onboardingError: onboardingResult.status === 'rejected'
+          ? (onboardingResult.reason instanceof Error ? onboardingResult.reason.message : 'Erro ao buscar KYC BR')
+          : null,
+      };
+
+      setCache((prev) => ({ ...prev, [id]: entry }));
+      setModalEntry(entry);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Erro ao buscar info da loja');
+    } finally { setLoadingId(null); }
+  }
+
+  return (
+    <>
+      {modalEntry && (
+        <ShopeeJsonModal entry={modalEntry} onClose={() => setModalEntry(null)} />
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Loja</th>
+              <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Marketplace</th>
+              <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Access Token</th>
+              <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Refresh Token</th>
+              <th className="py-1.5 px-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {integrations.map((int) => {
+              const Icon = MARKETPLACE_ICON[int.marketplace] ?? ShoppingCart;
+              const label = int.nickname || `${int.sellerId ?? int.shopId ?? int.id.slice(0, 8)}`;
+              return (
+                <tr key={int.id} className="border-b border-border/50 last:border-0">
+                  <td className="py-2 px-2">
+                    <div className="flex items-center gap-1.5">
+                      <Icon className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <span className="font-medium text-foreground truncate max-w-[120px]">{label}</span>
+                    </div>
+                  </td>
+                  <td className="py-2 px-2">
+                    <span className="text-muted-foreground">{MARKETPLACE_LABEL[int.marketplace] ?? int.marketplace}</span>
+                  </td>
+                  <td className="py-2 px-2"><TokenBadge expiresAt={int.tokenExpiresAt} /></td>
+                  <td className="py-2 px-2"><TokenBadge expiresAt={int.refreshTokenExpiresAt} /></td>
+                  <td className="py-2 px-2">
+                    {int.marketplace === 'shopee' && (
+                      <button
+                        onClick={() => handleShopeeInfo(int.id, label)}
+                        disabled={loadingId === int.id}
+                        title="Ver informações da loja Shopee"
+                        className={cn(
+                          'flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium transition-colors',
+                          'border-border text-muted-foreground hover:text-foreground hover:bg-accent',
+                          loadingId === int.id && 'opacity-50 pointer-events-none',
+                        )}
+                      >
+                        <Info className="w-3 h-3" />
+                        {loadingId === int.id ? '...' : 'Info'}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
