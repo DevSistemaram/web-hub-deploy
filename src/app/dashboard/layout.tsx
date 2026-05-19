@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   LayoutDashboard, Link2, KeyRound, FileText, LogOut, ShieldCheck,
-  UserX, ClipboardList, SlidersHorizontal, Moon, Sun, Menu, X,
+  UserX, ClipboardList, SlidersHorizontal, Moon, Sun, Menu, X, Webhook,
 } from 'lucide-react';
 import { isAuthenticated, getUser, clearToken, isAdmin, isImpersonating, stopImpersonation } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
   { href: '/dashboard/integrations', label: 'Integrações', icon: Link2 },
   { href: '/dashboard/settings', label: 'Token ERP', icon: KeyRound },
+  { href: '/dashboard/webhook-tester', label: 'Teste Webhook', icon: Webhook },
 ];
 
 const adminNavItems = [

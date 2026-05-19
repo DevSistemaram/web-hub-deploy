@@ -112,6 +112,54 @@ export interface MarketplaceConfig {
   hasClientSecret: boolean;
 }
 
+export interface ShopeeBrOnboardingInfo {
+  request_id: string;
+  error?: string;
+  message?: string;
+  response?: {
+    tax_id_type: number;
+    tax_id: string;
+    cpf_id?: string;
+    cnpj_id?: string;
+    name?: string;
+    legal_entity_name?: string;
+    birthday?: number;
+    birthday_str?: string;
+    state_registration?: string;
+    billing_address?: {
+      state: string;
+      city: string;
+      address: string;
+      zipcode: string;
+      neighborhood: string;
+    };
+    onboarding_status: number;
+    submission_time?: number;
+    nationality?: string;
+    cnae_main?: string;
+    cnae_secondary?: string;
+    mei_check?: string;
+    onboarding_passed: boolean;
+  };
+}
+
+export interface ShopeeShopInfo {
+  shop_name: string;
+  region: string;
+  status: 'NORMAL' | 'BANNED' | 'FROZEN' | string;
+  auth_time: number;
+  expire_time: number;
+  is_cb: boolean;
+  is_sip: boolean;
+  merchant_id: number | null;
+  shop_fulfillment_flag: string;
+  is_main_shop: boolean;
+  is_direct_shop: boolean;
+  request_id: string;
+  error?: string;
+  message?: string;
+}
+
 export interface UpsertMarketplaceConfigPayload {
   redirectUri?: string;
   partnerId?: string;
@@ -169,6 +217,10 @@ export const api = {
         `/admin/marketplace-configs/${marketplace}`,
         { method: 'PATCH', body: JSON.stringify(data) },
       ),
+    getShopeeInfo: (integrationId: string) =>
+      request<ShopeeShopInfo>(`/admin/integrations/${integrationId}/shopee-info`),
+    getShopeeOnboarding: (integrationId: string) =>
+      request<ShopeeBrOnboardingInfo>(`/admin/integrations/${integrationId}/shopee-onboarding`),
   },
   integrations: {
     list: () => request<Integration[]>('/integrations'),
@@ -201,5 +253,19 @@ export const api = {
       ),
     revokeErpToken: (id: string) =>
       request(`/settings/erp-token/${id}`, { method: 'DELETE' }),
+  },
+  webhookTester: {
+    fire: (url: string, payload?: Record<string, unknown>, headers?: Record<string, string>) =>
+      request<{
+        ok: boolean;
+        status?: number;
+        statusText?: string;
+        body?: string;
+        duration: number;
+        error?: string;
+      }>('/webhook-tester/fire', {
+        method: 'POST',
+        body: JSON.stringify({ url, payload, headers }),
+      }),
   },
 };
