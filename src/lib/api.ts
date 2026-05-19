@@ -254,4 +254,18 @@ export const api = {
     revokeErpToken: (id: string) =>
       request(`/settings/erp-token/${id}`, { method: 'DELETE' }),
   },
+  webhookTester: {
+    fire: (url: string, payload?: Record<string, unknown>, headers?: Record<string, string>) =>
+      request<{
+        ok: boolean;
+        status?: number;
+        statusText?: string;
+        body?: string;
+        duration: number;
+        error?: string;
+      }>('/webhook-tester/fire', {
+        method: 'POST',
+        body: JSON.stringify({ url, payload, headers }),
+      }),
+  },
 };
