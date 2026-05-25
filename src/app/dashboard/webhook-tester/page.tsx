@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Send, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { api } from '@/lib/api';
+import { isAdmin } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,12 +14,17 @@ import { Badge } from '@/components/ui/badge';
 type FireResult = Awaited<ReturnType<typeof api.webhookTester.fire>>;
 
 export default function WebhookTesterPage() {
+  const router = useRouter();
   const [url, setUrl] = useState('');
   const [payloadRaw, setPayloadRaw] = useState('{}');
   const [headersRaw, setHeadersRaw] = useState('{}');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<FireResult | null>(null);
   const [parseError, setParseError] = useState('');
+
+  useEffect(() => {
+    if (!isAdmin()) router.replace('/dashboard');
+  }, [router]);
 
   async function handleFire() {
     setParseError('');

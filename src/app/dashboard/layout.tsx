@@ -17,13 +17,13 @@ const navItems = [
   { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
   { href: '/dashboard/integrations', label: 'Integrações', icon: Link2 },
   { href: '/dashboard/settings', label: 'Token ERP', icon: KeyRound },
-  { href: '/dashboard/webhook-tester', label: 'Teste Webhook', icon: Webhook },
 ];
 
 const adminNavItems = [
   { href: '/dashboard/admin', label: 'Admin', icon: ShieldCheck, exact: true },
   { href: '/dashboard/admin/audit-logs', label: 'Audit Log', icon: ClipboardList, exact: false },
   { href: '/dashboard/admin/marketplace-configs', label: 'Config. APIs', icon: SlidersHorizontal, exact: false },
+  { href: '/dashboard/webhook-tester', label: 'Teste Webhook', icon: Webhook, exact: false },
 ];
 
 function navLinkClass(active: boolean) {
