@@ -107,10 +107,13 @@ function AuditLogsContent() {
   const [loading, setLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
+  const [sourceType, setSourceType] = useState<'user' | 'erp'>('user');
   const [userId, setUserId] = useState(searchParams.get('userId') ?? '');
   const [screen, setScreen] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+
+  const effectiveScreen = sourceType === 'erp' ? 'erp:' : screen;
 
   useEffect(() => {
     if (!isAdmin()) { router.push('/dashboard'); return; }
@@ -124,7 +127,7 @@ function AuditLogsContent() {
     try {
       const data = await api.admin.getAuditLogs({
         userId: opts.userId !== undefined ? opts.userId || undefined : userId || undefined,
-        screen: opts.screen !== undefined ? opts.screen || undefined : screen || undefined,
+        screen: opts.screen !== undefined ? opts.screen || undefined : effectiveScreen || undefined,
         search: opts.search !== undefined ? opts.search || undefined : search || undefined,
         page: opts.page ?? page,
         limit: 50,
@@ -133,13 +136,13 @@ function AuditLogsContent() {
       if (opts.page) setPage(opts.page);
     } catch { /* silence */ }
     finally { setLoading(false); }
-  }, [userId, screen, search, page]);
+  }, [userId, effectiveScreen, search, page]);
 
   useEffect(() => { fetchLogs(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function applyFilters(overrides: { userId?: string; screen?: string; search?: string } = {}) {
     const u = overrides.userId !== undefined ? overrides.userId : userId;
-    const s = overrides.screen !== undefined ? overrides.screen : screen;
+    const s = sourceType === 'erp' ? 'erp:' : (overrides.screen !== undefined ? overrides.screen : screen);
     const q = overrides.search !== undefined ? overrides.search : search;
     setPage(1);
     setLoading(true);
@@ -156,7 +159,7 @@ function AuditLogsContent() {
     setLoading(true);
     api.admin.getAuditLogs({
       userId: userId || undefined,
-      screen: screen || undefined,
+      screen: effectiveScreen || undefined,
       search: search || undefined,
       page: next,
       limit: 50,
@@ -169,13 +172,26 @@ function AuditLogsContent() {
     setSearch('');
     setPage(1);
     setLoading(true);
-    api.admin.getAuditLogs({ page: 1, limit: 50 })
+    api.admin.getAuditLogs({ screen: sourceType === 'erp' ? 'erp:' : undefined, page: 1, limit: 50 })
       .then((data) => { setLogs(data); setPage(1); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }
 
-  const activeFilterCount = [userId, screen, search].filter(Boolean).length;
+  function handleSourceTypeChange(type: 'user' | 'erp') {
+    setSourceType(type);
+    setUserId('');
+    setScreen('');
+    setSearch('');
+    setPage(1);
+    setLoading(true);
+    api.admin.getAuditLogs({ screen: type === 'erp' ? 'erp:' : undefined, page: 1, limit: 50 })
+      .then((data) => { setLogs(data); setPage(1); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }
+
+  const activeFilterCount = [userId, sourceType === 'user' ? screen : '', search].filter(Boolean).length;
   const selectedUserName = users.find((u) => u.id === userId)?.name;
 
   return (
@@ -197,6 +213,23 @@ function AuditLogsContent() {
       {/* ── Filters ─────────────────────────────────────────────────────────── */}
       <Card>
         <CardContent className="py-4 space-y-3">
+          {/* Source type toggle */}
+          <div className="flex items-center gap-1 p-0.5 bg-muted rounded-md w-fit">
+            {(['user', 'erp'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => handleSourceTypeChange(type)}
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                  sourceType === type
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {type === 'user' ? 'Usuário' : 'ERP'}
+              </button>
+            ))}
+          </div>
+
           <div className="flex flex-wrap gap-2 items-center">
             <label className="text-xs text-muted-foreground font-medium w-full sm:w-auto">Filtros</label>
 
@@ -211,15 +244,17 @@ function AuditLogsContent() {
               ))}
             </select>
 
-            <select
-              value={screen}
-              onChange={(e) => { setScreen(e.target.value); applyFilters({ screen: e.target.value }); }}
-              className="h-8 text-sm rounded-md border border-input bg-background px-2 text-foreground"
-            >
-              {SCREENS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
+            {sourceType === 'user' && (
+              <select
+                value={screen}
+                onChange={(e) => { setScreen(e.target.value); applyFilters({ screen: e.target.value }); }}
+                className="h-8 text-sm rounded-md border border-input bg-background px-2 text-foreground"
+              >
+                {SCREENS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            )}
 
             {activeFilterCount > 0 && (
               <Button size="sm" variant="ghost" onClick={clearFilters} className="text-muted-foreground h-8">
