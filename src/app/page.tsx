@@ -288,7 +288,7 @@ const FOOTER_CONTACTS = [
   {
     icon: MessageCircle,
     label: 'WhatsApp',
-    href: 'https://api.whatsapp.com/send?phone=5519993617069',
+    href: `https://api.whatsapp.com/send?phone=${WHATSAPP_PHONE}`,
   },
   {
     icon: Camera,
