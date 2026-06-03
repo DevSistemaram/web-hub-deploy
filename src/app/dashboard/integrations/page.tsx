@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Pencil, Check, X, Unplug, Plus, ShoppingCart, ShoppingBag, Package2, Globe, Eye, EyeOff, Loader2 } from 'lucide-react';
+import Image from 'next/image';
+import { Pencil, Check, X, Unplug, Plus, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { api, Integration } from '@/lib/api';
 import { confirm, toastError, toastSuccess } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
@@ -12,11 +13,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 type Marketplace = Integration['marketplace'];
 
-const MARKETPLACE_META: Record<Marketplace, { name: string; icon: React.ElementType }> = {
-  mercadolivre: { name: 'Mercado Livre', icon: ShoppingCart },
-  shopee: { name: 'Shopee', icon: ShoppingBag },
-  ideris: { name: 'Ideris', icon: Package2 },
-  nuvemshop: { name: 'Nuvemshop', icon: Globe },
+const MARKETPLACE_META: Record<Marketplace, { name: string; image?: string; icon?: React.ElementType }> = {
+  mercadolivre: { name: 'Mercado Livre', image: '/mercado_livre.svg' },
+  shopee: { name: 'Shopee', image: '/shopee.svg' },
+  ideris: { name: 'Ideris', image: '/ideris.svg' },
+  nuvemshop: { name: 'Nuvemshop', image: '/nuvemshop.svg' },
 };
 
 export default function IntegrationsPage() {
@@ -146,13 +147,17 @@ function MarketplaceSection({
   onDeactivate: (id: string) => void;
   onNicknameUpdate: (id: string, nickname: string) => void;
 }) {
-  const { name, icon: Icon } = MARKETPLACE_META[marketplace];
+  const { name, image, icon: Icon } = MARKETPLACE_META[marketplace];
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Icon className="w-5 h-5 text-muted-foreground" />
+          {image ? (
+            <Image src={image} alt={name} width={20} height={20} className="w-5 h-5 object-contain" />
+          ) : Icon ? (
+            <Icon className="w-5 h-5 text-muted-foreground" />
+          ) : null}
           <h2 className="text-base font-semibold text-foreground">{name}</h2>
           {integrations.length > 0 && (
             <Badge variant="success">
@@ -289,7 +294,7 @@ function IderisModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
         <CardContent className="pt-6 pb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Package2 className="w-5 h-5 text-muted-foreground" />
+              <Image src="/ideris.svg" alt="Ideris" width={20} height={20} className="w-5 h-5 object-contain" />
               <h2 className="text-lg font-semibold text-foreground">Conectar Ideris</h2>
             </div>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, ShoppingBag, Globe, ArrowLeft, CheckCircle2, RefreshCw, AlertTriangle, Clock } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft, CheckCircle2, RefreshCw, AlertTriangle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { api, MarketplaceConfig, UpsertMarketplaceConfigPayload } from '@/lib/api';
 import { isAdmin } from '@/lib/auth';
@@ -14,10 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 type SupportedMarketplace = 'shopee' | 'mercadolivre' | 'nuvemshop';
 
-const MARKETPLACE_META: Record<SupportedMarketplace, { label: string; icon: React.ElementType }> = {
-  shopee: { label: 'Shopee', icon: ShoppingBag },
-  mercadolivre: { label: 'Mercado Livre', icon: ShoppingCart },
-  nuvemshop: { label: 'Nuvemshop', icon: Globe },
+const MARKETPLACE_META: Record<SupportedMarketplace, { label: string; image: string }> = {
+  shopee: { label: 'Shopee', image: '/shopee.svg' },
+  mercadolivre: { label: 'Mercado Livre', image: '/mercado_livre.svg' },
+  nuvemshop: { label: 'Nuvemshop', image: '/nuvemshop.svg' },
 };
 
 function partnerKeyStatus(expiresAt: string | null) {
@@ -111,13 +112,13 @@ export default function MarketplaceConfigsPage() {
           const cfg = configs.find((c) => c.marketplace === mp);
           const form = forms[mp] ?? {};
           const isSaving = saving === mp;
-          const { label, icon: Icon } = MARKETPLACE_META[mp];
+          const { label, image } = MARKETPLACE_META[mp];
 
           return (
             <Card key={mp}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Icon className="w-4 h-4" />
+                  <Image src={image} alt={label} width={16} height={16} className="w-4 h-4 object-contain" />
                   {label}
                   {cfg?.isConfigured
                     ? (
