@@ -46,7 +46,7 @@ async function request<T>(
 
 export interface Integration {
   id: string;
-  marketplace: 'mercadolivre' | 'shopee';
+  marketplace: 'mercadolivre' | 'shopee' | 'ideris' | 'nuvemshop';
   nickname: string | null;
   shopId: string | null;
   sellerId: string | null;
@@ -98,7 +98,7 @@ export interface AuditLog {
 
 export interface MarketplaceConfig {
   id: string;
-  marketplace: 'shopee' | 'mercadolivre';
+  marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop';
   redirectUri: string | null;
   env: string | null;
   isConfigured: boolean;
@@ -107,7 +107,7 @@ export interface MarketplaceConfig {
   partnerId: string | null;
   hasPartnerKey: boolean;
   partnerKeyExpiresAt: string | null;
-  // ML
+  // ML + Nuvemshop
   appId: string | null;
   hasClientSecret: boolean;
 }
@@ -212,7 +212,7 @@ export const api = {
     },
     listMarketplaceConfigs: () =>
       request<MarketplaceConfig[]>('/admin/marketplace-configs'),
-    upsertMarketplaceConfig: (marketplace: 'shopee' | 'mercadolivre', data: UpsertMarketplaceConfigPayload) =>
+    upsertMarketplaceConfig: (marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop', data: UpsertMarketplaceConfigPayload) =>
       request<{ success: boolean; marketplace: string; isConfigured: boolean }>(
         `/admin/marketplace-configs/${marketplace}`,
         { method: 'PATCH', body: JSON.stringify(data) },
@@ -235,6 +235,17 @@ export const api = {
       request('/integrations/shopee/callback', {
         method: 'POST',
         body: JSON.stringify({ code, shop_id, nickname }),
+      }),
+    connectIderis: (token: string, nickname?: string) =>
+      request('/integrations/ideris/connect', {
+        method: 'POST',
+        body: JSON.stringify({ token, nickname }),
+      }),
+    getNuvemshopAuthUrl: () => request<{ url: string }>('/integrations/nuvemshop/auth-url'),
+    handleNuvemshopCallback: (code: string, nickname?: string) =>
+      request('/integrations/nuvemshop/callback', {
+        method: 'POST',
+        body: JSON.stringify({ code, nickname }),
       }),
     updateNickname: (id: string, nickname: string) =>
       request(`/integrations/${id}/nickname`, {

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingCart, ShoppingBag, ArrowLeft, CheckCircle2, RefreshCw, AlertTriangle, Clock } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft, CheckCircle2, RefreshCw, AlertTriangle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { api, MarketplaceConfig, UpsertMarketplaceConfigPayload } from '@/lib/api';
 import { isAdmin } from '@/lib/auth';
@@ -11,6 +12,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+type SupportedMarketplace = 'shopee' | 'mercadolivre' | 'nuvemshop';
+
+const MARKETPLACE_META: Record<SupportedMarketplace, { label: string; image: string }> = {
+  shopee: { label: 'Shopee', image: '/shopee.svg' },
+  mercadolivre: { label: 'Mercado Livre', image: '/mercado_livre.svg' },
+  nuvemshop: { label: 'Nuvemshop', image: '/nuvemshop.svg' },
+};
 
 function partnerKeyStatus(expiresAt: string | null) {
   if (!expiresAt) return null;
@@ -48,6 +57,7 @@ export default function MarketplaceConfigsPage() {
             partnerKeyExpiresAt: c.partnerKeyExpiresAt ?? '',
           } : {}),
           ...(c.marketplace === 'mercadolivre' ? { appId: c.appId ?? '' } : {}),
+          ...(c.marketplace === 'nuvemshop' ? { appId: c.appId ?? '' } : {}),
         };
       }
       setForms(initial);
@@ -62,7 +72,7 @@ export default function MarketplaceConfigsPage() {
     }));
   }
 
-  async function handleSave(marketplace: 'shopee' | 'mercadolivre') {
+  async function handleSave(marketplace: SupportedMarketplace) {
     setSaving(marketplace);
     try {
       await api.admin.upsertMarketplaceConfig(marketplace, forms[marketplace] ?? {});
@@ -76,6 +86,8 @@ export default function MarketplaceConfigsPage() {
 
   if (loading) return <div className="text-muted-foreground text-sm">Carregando...</div>;
 
+  const marketplaces: SupportedMarketplace[] = ['shopee', 'mercadolivre', 'nuvemshop'];
+
   return (
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
@@ -87,7 +99,7 @@ export default function MarketplaceConfigsPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Configuração das APIs</h1>
           <p className="text-muted-foreground text-sm">
-            Credenciais de acesso às APIs da Shopee e Mercado Livre. Chaves secretas nunca são exibidas após salvar.
+            Credenciais de acesso às APIs da Shopee, Mercado Livre e Nuvemshop. Chaves secretas nunca são exibidas após salvar.
           </p>
         </div>
         <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto" onClick={load} title="Recarregar">
@@ -96,18 +108,17 @@ export default function MarketplaceConfigsPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {(['shopee', 'mercadolivre'] as const).map((mp) => {
+        {marketplaces.map((mp) => {
           const cfg = configs.find((c) => c.marketplace === mp);
           const form = forms[mp] ?? {};
           const isSaving = saving === mp;
-          const label = mp === 'shopee' ? 'Shopee' : 'Mercado Livre';
-          const Icon = mp === 'shopee' ? ShoppingBag : ShoppingCart;
+          const { label, image } = MARKETPLACE_META[mp];
 
           return (
             <Card key={mp}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Icon className="w-4 h-4" />
+                  <Image src={image} alt={label} width={16} height={16} className="w-4 h-4 object-contain" />
                   {label}
                   {cfg?.isConfigured
                     ? (
@@ -159,10 +170,10 @@ export default function MarketplaceConfigsPage() {
                         {(() => {
                           const st = partnerKeyStatus(cfg?.partnerKeyExpiresAt ?? null);
                           if (!st) return null;
-                          const Icon = st.icon;
+                          const StatusIcon = st.icon;
                           return (
                             <Badge variant={st.variant} className="ml-2 text-[10px] inline-flex items-center gap-0.5 py-0">
-                              <Icon className="w-3 h-3" />{st.label}
+                              <StatusIcon className="w-3 h-3" />{st.label}
                             </Badge>
                           );
                         })()}
@@ -188,14 +199,16 @@ export default function MarketplaceConfigsPage() {
                   </>
                 )}
 
-                {mp === 'mercadolivre' && (
+                {(mp === 'mercadolivre' || mp === 'nuvemshop') && (
                   <>
                     <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">App ID (Client ID)</label>
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        {mp === 'nuvemshop' ? 'Client ID' : 'App ID (Client ID)'}
+                      </label>
                       <Input
                         value={form.appId ?? ''}
                         onChange={(e) => update(mp, 'appId', e.target.value)}
-                        placeholder="1234567890123456"
+                        placeholder={mp === 'nuvemshop' ? '123456' : '1234567890123456'}
                         className="h-8 text-sm"
                       />
                     </div>
