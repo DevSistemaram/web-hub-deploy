@@ -1,6 +1,17 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Check, LayoutDashboard, PackageCheck, Plug } from 'lucide-react';
+import {
+  ArrowRight,
+  Camera,
+  Check,
+  Globe,
+  Mail,
+  MessageCircle,
+  Package2,
+  ShoppingBag,
+  ShoppingCart,
+  SquarePlay,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -8,24 +19,30 @@ export const dynamic = 'force-static';
 
 const MARKETPLACES = ['Mercado Livre', 'Shopee', 'Ideris', 'Nuvemshop'];
 
-const FEATURES = [
+const CONNECTIONS = [
   {
-    icon: Plug,
-    title: 'Conexão em minutos',
-    description:
-      'Autorize suas contas nos marketplaces com poucos cliques. Sem configuração técnica complicada.',
+    icon: ShoppingCart,
+    name: 'Mercado Livre',
+    description: 'O maior marketplace da América Latina, direto no seu ERP.',
+    tagline: 'Conexão oficial via OAuth',
   },
   {
-    icon: PackageCheck,
-    title: 'Pedidos padronizados',
-    description:
-      'Receba os pedidos de todos os canais em um formato único, pronto para qualquer ERP.',
+    icon: ShoppingBag,
+    name: 'Shopee',
+    description: 'Milhões de compradores todos os dias, pedidos sincronizados.',
+    tagline: 'Conexão oficial via OAuth',
   },
   {
-    icon: LayoutDashboard,
-    title: 'Tudo em um só lugar',
-    description:
-      'Gerencie integrações e acompanhe a sincronização de pedidos em um painel único.',
+    icon: Package2,
+    name: 'Ideris',
+    description: 'Hub que multiplica seus canais de venda em um só lugar.',
+    tagline: 'Integração oficial via API',
+  },
+  {
+    icon: Globe,
+    name: 'Nuvemshop',
+    description: 'Sua loja própria integrada ao mesmo fluxo de pedidos.',
+    tagline: 'Conexão oficial via OAuth',
   },
 ];
 
@@ -68,10 +85,7 @@ function Hero() {
   return (
     <section className="bg-gradient-to-br from-primary/5 to-primary/10">
       <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-28">
-        <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
-          Mercado Livre · Shopee · Ideris · Nuvemshop
-        </span>
-        <h1 className="mt-6 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
           Seu ERP conectado aos maiores marketplaces do Brasil
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
@@ -89,41 +103,36 @@ function Hero() {
             <Link href="/login">Entrar</Link>
           </Button>
         </div>
-        <ul className="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-3">
-          {MARKETPLACES.map((m) => (
-            <li key={m} className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10">
-                <Check className="h-3 w-3 text-primary" />
-              </span>
-              {m}
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   );
 }
 
-function Features() {
+function Connections() {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+    <section id="conexoes" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-bold text-foreground">
-          Tudo que você precisa para vender mais
+          Conecte-se aos maiores canais de venda do Brasil
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Centralize seus canais de venda e deixe a integração com a gente.
+          Uma conexão dedicada para cada marketplace — autorize uma vez e receba todos os pedidos
+          no mesmo fluxo.
         </p>
       </div>
-      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map(({ icon: Icon, title, description }) => (
-          <Card key={title}>
+      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {CONNECTIONS.map(({ icon: Icon, name, description, tagline }) => (
+          <Card key={name} className="transition hover:border-primary/40 hover:shadow-md">
             <CardContent className="pt-6">
-              <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10">
-                <Icon className="h-5 w-5 text-primary" />
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Icon className="h-6 w-6 text-primary" />
               </span>
-              <h3 className="mt-4 text-lg font-semibold text-foreground">{title}</h3>
+              <h3 className="mt-4 text-lg font-semibold text-foreground">{name}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+              <p className="mt-4 flex items-center gap-2 text-xs font-medium text-primary">
+                <Check className="h-3.5 w-3.5" />
+                {tagline}
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -179,14 +188,106 @@ function FinalCta() {
   );
 }
 
+const FOOTER_PRODUCT_LINKS = [
+  { label: 'Entrar', href: '/login' },
+  { label: 'Criar conta', href: '/register' },
+  { label: 'Site Sistema RAM', href: 'https://sistemaram.com.br' },
+];
+
+const FOOTER_CONTACTS = [
+  {
+    icon: Mail,
+    label: 'suporte@sistemaram.com.br',
+    href: 'mailto:suporte@sistemaram.com.br',
+  },
+  {
+    icon: MessageCircle,
+    label: 'WhatsApp',
+    href: 'https://api.whatsapp.com/send?phone=5519993617069',
+  },
+  {
+    icon: Camera,
+    label: 'Instagram',
+    href: 'https://www.instagram.com/sistemaram',
+  },
+  {
+    icon: SquarePlay,
+    label: 'YouTube',
+    href: 'https://www.youtube.com/@SistemaRAM',
+  },
+];
+
 function Footer() {
   return (
-    <footer className="border-t">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
-        <Image src="/RAMHub.svg" alt="Hub RAM" width={100} height={30} className="h-7 w-auto" />
-        <p className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Sistema RAM. Todos os direitos reservados.
-        </p>
+    <footer className="border-t bg-secondary/50">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <Image src="/RAMHub.svg" alt="Hub RAM" width={120} height={36} className="h-8 w-auto" />
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+            Seu ERP conectado aos maiores marketplaces do Brasil. Pedidos centralizados em um
+            único fluxo.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Produto</h3>
+          <ul className="mt-4 space-y-3">
+            {FOOTER_PRODUCT_LINKS.map(({ label, href }) => (
+              <li key={label}>
+                <Link
+                  href={href}
+                  className="text-sm text-muted-foreground transition hover:text-foreground"
+                >
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Integrações</h3>
+          <ul className="mt-4 space-y-3">
+            {MARKETPLACES.map((m) => (
+              <li key={m}>
+                <Link
+                  href="/#conexoes"
+                  className="text-sm text-muted-foreground transition hover:text-foreground"
+                >
+                  {m}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Contato</h3>
+          <ul className="mt-4 space-y-3">
+            {FOOTER_CONTACTS.map(({ icon: Icon, label, href }) => (
+              <li key={label}>
+                <a
+                  href={href}
+                  {...(href.startsWith('http')
+                    ? { target: '_blank', rel: 'noopener noreferrer' }
+                    : {})}
+                  className="flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className="border-t">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+          <p className="text-center text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Sistema RAM. Todos os direitos reservados.
+          </p>
+        </div>
       </div>
     </footer>
   );
@@ -197,7 +298,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-background">
       <Navbar />
       <Hero />
-      <Features />
+      <Connections />
       <HowItWorks />
       <FinalCta />
       <Footer />
