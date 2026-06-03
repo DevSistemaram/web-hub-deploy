@@ -4,12 +4,9 @@ import {
   ArrowRight,
   Camera,
   Check,
-  Globe,
+  ChevronDown,
   Mail,
   MessageCircle,
-  Package2,
-  ShoppingBag,
-  ShoppingCart,
   SquarePlay,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,28 +18,28 @@ const MARKETPLACES = ['Mercado Livre', 'Shopee', 'Ideris', 'Nuvemshop'];
 
 const CONNECTIONS = [
   {
-    icon: ShoppingCart,
+    image: '/mercado_livre.svg',
     name: 'Mercado Livre',
     description: 'O maior marketplace da América Latina, direto no seu ERP.',
-    tagline: 'Conexão oficial via OAuth',
+    tagline: 'Conexão oficial',
   },
   {
-    icon: ShoppingBag,
+    image: '/shopee.svg',
     name: 'Shopee',
     description: 'Milhões de compradores todos os dias, pedidos sincronizados.',
-    tagline: 'Conexão oficial via OAuth',
+    tagline: 'Conexão oficial',
   },
   {
-    icon: Package2,
+    image: '/ideris.svg',
     name: 'Ideris',
     description: 'Hub que multiplica seus canais de venda em um só lugar.',
-    tagline: 'Integração oficial via API',
+    tagline: 'Integração oficial',
   },
   {
-    icon: Globe,
+    image: '/nuvemshop.svg',
     name: 'Nuvemshop',
     description: 'Sua loja própria integrada ao mesmo fluxo de pedidos.',
-    tagline: 'Conexão oficial via OAuth',
+    tagline: 'Conexão oficial',
   },
 ];
 
@@ -83,8 +80,12 @@ function Navbar() {
 
 function Hero() {
   return (
-    <section className="bg-gradient-to-br from-primary/5 to-primary/10">
+    <section className="bg-gradient-to-br from-primary/10 to-primary/20">
       <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-28">
+        <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary ring-1 ring-primary/20">
+          <Check className="h-3.5 w-3.5" />
+          4 marketplaces integrados
+        </div>
         <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
           Seu ERP conectado aos maiores marketplaces do Brasil
         </h1>
@@ -93,15 +94,19 @@ function Hero() {
           padronizado. Menos retrabalho, mais vendas.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button size="lg" asChild>
+          <Button size="lg" asChild className="w-full sm:w-auto">
             <Link href="/register">
               Criar conta grátis
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
-          <Button size="lg" variant="outline" asChild>
+          <Button size="lg" variant="outline" asChild className="w-full sm:w-auto">
             <Link href="/login">Entrar</Link>
           </Button>
+        </div>
+        <div className="mt-12 flex flex-col items-center gap-1.5">
+          <p className="text-xs text-muted-foreground/60">Veja as integrações disponíveis</p>
+          <ChevronDown className="h-5 w-5 animate-bounce text-muted-foreground/40" />
         </div>
       </div>
     </section>
@@ -121,11 +126,11 @@ function Connections() {
         </p>
       </div>
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {CONNECTIONS.map(({ icon: Icon, name, description, tagline }) => (
+        {CONNECTIONS.map(({ image, name, description, tagline }) => (
           <Card key={name} className="transition hover:border-primary/40 hover:shadow-md">
             <CardContent className="pt-6">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <Icon className="h-6 w-6 text-primary" />
+                <Image src={image} alt={name} width={24} height={24} className="h-6 w-6 object-contain" />
               </span>
               <h3 className="mt-4 text-lg font-semibold text-foreground">{name}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
@@ -167,22 +172,102 @@ function HowItWorks() {
   );
 }
 
-function FinalCta() {
+const WHATSAPP_PHONE = '5519993617069';
+
+function whatsappPlanLink(plan: string) {
+  const text = `Olá! Tenho interesse no Hub RAM, no plano ${plan}.`;
+  return `https://api.whatsapp.com/send?phone=${WHATSAPP_PHONE}&text=${encodeURIComponent(text)}`;
+}
+
+const PLANS = [
+  {
+    name: 'Até 500 pedidos/mês',
+    price: 'R$ 350',
+    period: '/mês',
+    description: 'Todos os canais somados.',
+    highlight: false,
+  },
+  {
+    name: '501 a 1.000 pedidos/mês',
+    price: 'R$ 650',
+    period: '/mês',
+    description: 'Ao dobrar o volume, o custo não dobra.',
+    highlight: true,
+  },
+  {
+    name: 'Acima de 1.000 pedidos',
+    price: 'Sob consulta',
+    period: '',
+    description: 'Valores negociados de forma personalizada, garantindo sempre a melhor condição.',
+    highlight: false,
+  },
+];
+
+function Pricing() {
   return (
-    <section className="bg-primary">
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6">
-        <h2 className="text-3xl font-bold text-primary-foreground">
-          Comece a vender de forma integrada hoje
-        </h2>
-        <p className="mt-3 text-primary-foreground/70">
-          Crie sua conta gratuita e conecte seu primeiro marketplace em minutos.
-        </p>
-        <Button size="lg" variant="secondary" asChild className="mt-8">
-          <Link href="/register">
-            Criar conta grátis
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+    <section id="precos" className="border-t">
+      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold text-foreground">
+            Investimento e Condições Comerciais
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            Preço previsível, escalonado pelo seu volume de pedidos.
+          </p>
+        </div>
+
+        {/* <div className="mx-auto mt-10 flex max-w-3xl items-start gap-4 rounded-lg border border-primary/30 bg-primary/5 p-5 sm:items-center">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <Check className="h-5 w-5 text-primary" />
+          </span>
+          <div className="text-left">
+            <p className="font-semibold text-foreground">
+              Taxa de Implantação: <span className="text-primary">R$ 0,00</span> — Isento
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Como incentivo à nossa parceria, absorvemos 100% dos custos iniciais de setup.
+            </p>
+          </div>
+        </div> */}
+
+        <div className="mt-10 grid gap-6 sm:grid-cols-3">
+          {PLANS.map(({ name, price, period, description, highlight }) => (
+            <Card
+              key={name}
+              className={
+                highlight
+                  ? 'relative border-primary shadow-md'
+                  : 'transition hover:border-primary/40 hover:shadow-md'
+              }
+            >
+              {highlight && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
+                  Melhor custo por pedido
+                </span>
+              )}
+              <CardContent className="pt-6 text-center">
+                <h3 className="text-sm font-semibold text-muted-foreground">{name}</h3>
+                <p className="mt-4 text-3xl font-bold text-foreground">
+                  {price}
+                  {period && (
+                    <span className="text-base font-medium text-muted-foreground">{period}</span>
+                  )}
+                </p>
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{description}</p>
+                <Button
+                  variant={highlight ? 'default' : 'outline'}
+                  asChild
+                  className="mt-6 w-full"
+                >
+                  <a href={whatsappPlanLink(name)} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Falar com o suporte
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -300,7 +385,7 @@ export default function HomePage() {
       <Hero />
       <Connections />
       <HowItWorks />
-      <FinalCta />
+      <Pricing />
       <Footer />
     </main>
   );
