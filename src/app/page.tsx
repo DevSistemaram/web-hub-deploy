@@ -90,7 +90,7 @@ const STEPS = [
   },
   {
     title: 'Ciclo completo no seu ERP',
-    description: 'Pedidos, estoque, preços e NF-e — tudo sincronizado automaticamente.',
+    description: 'Pedidos, estoque, preços e NF-e tudo sincronizado automaticamente.',
   },
 ];
 
@@ -126,7 +126,7 @@ function Hero() {
           Seu ERP conectado aos maiores marketplaces do Brasil
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-          Importe pedidos, sincronize estoque, ajuste preços e envie NF-e — tudo em um único hub
+          Importe pedidos, sincronize estoque, ajuste preços e envie NF-e tudo em um único hub
           conectado ao seu ERP.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
@@ -157,7 +157,7 @@ function Connections() {
           Conecte-se aos maiores canais de venda do Brasil
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Uma conexão dedicada para cada marketplace — autorize uma vez e receba todos os pedidos
+          Uma conexão dedicada para cada marketplace autorize uma vez e receba todos os pedidos
           no mesmo fluxo.
         </p>
       </div>
@@ -189,7 +189,7 @@ function Features() {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold text-foreground">O ciclo completo, no seu ERP</h2>
           <p className="mt-3 text-muted-foreground">
-            Do pedido recebido à nota enviada — sem planilha, sem cópia manual, sem retrabalho.
+            Do pedido recebido à nota enviada sem planilha, sem cópia manual, sem retrabalho.
           </p>
         </div>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
