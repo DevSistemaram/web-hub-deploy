@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Copy, Plus, KeyRound, ShoppingCart, ShoppingBag } from 'lucide-react';
+import { Copy, Plus, KeyRound, ShoppingCart, ShoppingBag, Store } from 'lucide-react';
 import { api, Integration, ErpToken } from '@/lib/api';
 import { toastError, toastInfo } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
@@ -113,7 +113,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-1">
             {integrations.map((integration) => {
-              const Icon = MARKETPLACE_ICON[integration.marketplace];
+              const Icon = MARKETPLACE_ICON[integration.marketplace] ?? Store;
               return (
                 <label
                   key={integration.id}
@@ -209,7 +209,7 @@ function ErpTokenCard({ token, integrations, onRevoke }: {
               {scopedIntegrations === null ? (
                 <span className="text-xs text-muted-foreground italic">Acesso a todas as integrações</span>
               ) : scopedIntegrations.map((i) => {
-                const Icon = MARKETPLACE_ICON[i.marketplace];
+                const Icon = MARKETPLACE_ICON[i.marketplace] ?? Store;
                 return (
                   <Badge key={i.id} variant="secondary" className="gap-1">
                     <Icon className="w-3 h-3" />
