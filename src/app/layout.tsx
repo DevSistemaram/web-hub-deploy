@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hub.sistemaram.com.br';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hub.ramnuvem.com';
 
 export const viewport: Viewport = {
   width: 'device-width',
