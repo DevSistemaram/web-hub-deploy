@@ -5,9 +5,14 @@ import {
   Camera,
   Check,
   ChevronDown,
+  FileCheck,
   Mail,
   MessageCircle,
+  PackageCheck,
+  RefreshCw,
   SquarePlay,
+  Tag,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,6 +48,37 @@ const CONNECTIONS = [
   },
 ];
 
+const FEATURES = [
+  {
+    icon: PackageCheck,
+    title: 'Importação de Pedidos',
+    tag: 'Automático',
+    description:
+      'Pedidos de todos os canais chegam no ERP sem digitação manual padronizados e prontos para faturar.',
+  },
+  {
+    icon: RefreshCw,
+    title: 'Saldo & Estoque',
+    tag: 'Em tempo real',
+    description:
+      'Baixa de estoque sincronizada com o ERP ao confirmar venda. Evite vender produto sem saldo.',
+  },
+  {
+    icon: Tag,
+    title: 'Preços Atualizados',
+    tag: 'Multi-canal',
+    description:
+      'Altere o preço no ERP e o hub propaga a mudança para todos os marketplaces conectados.',
+  },
+  {
+    icon: FileCheck,
+    title: 'Retorno de NF-e',
+    tag: 'Fiscal',
+    description:
+      'Envie a nota fiscal ao marketplace direto pelo hub ciclo de venda completo e em conformidade.',
+  },
+];
+
 const STEPS = [
   {
     title: 'Crie sua conta',
@@ -53,8 +89,8 @@ const STEPS = [
     description: 'Autorize Mercado Livre, Shopee, Ideris e Nuvemshop.',
   },
   {
-    title: 'Receba pedidos no seu ERP',
-    description: 'Pedidos centralizados em formato padronizado, prontos para integrar.',
+    title: 'Ciclo completo no seu ERP',
+    description: 'Pedidos, estoque, preços e NF-e — tudo sincronizado automaticamente.',
   },
 ];
 
@@ -84,14 +120,14 @@ function Hero() {
       <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-28">
         <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary ring-1 ring-primary/20">
           <Check className="h-3.5 w-3.5" />
-          4 marketplaces integrados
+          Ciclo completo ERP ↔ Marketplace
         </div>
         <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
           Seu ERP conectado aos maiores marketplaces do Brasil
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-          Conecte qualquer ERP em minutos e receba todos os pedidos centralizados em um formato
-          padronizado. Menos retrabalho, mais vendas.
+          Importe pedidos, sincronize estoque, ajuste preços e envie NF-e — tudo em um único hub
+          conectado ao seu ERP.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Button size="lg" asChild className="w-full sm:w-auto">
@@ -141,6 +177,38 @@ function Connections() {
             </CardContent>
           </Card>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function Features() {
+  return (
+    <section className="border-t bg-secondary/50">
+      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold text-foreground">O ciclo completo, no seu ERP</h2>
+          <p className="mt-3 text-muted-foreground">
+            Do pedido recebido à nota enviada — sem planilha, sem cópia manual, sem retrabalho.
+          </p>
+        </div>
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {FEATURES.map(({ icon: Icon, title, tag, description }) => (
+            <Card key={title} className="transition hover:border-primary/40 hover:shadow-md">
+              <CardContent className="pt-6">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <Icon className="h-6 w-6 text-primary" />
+                </span>
+                <h3 className="mt-4 text-lg font-semibold text-foreground">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+                <p className="mt-4 flex items-center gap-2 text-xs font-medium text-primary">
+                  <Zap className="h-3.5 w-3.5" />
+                  {tag}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -384,6 +452,7 @@ export default function HomePage() {
       <Navbar />
       <Hero />
       <Connections />
+      <Features />
       <HowItWorks />
       <Pricing />
       <Footer />
