@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, CheckCircle2, RefreshCw, AlertTriangle, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 import { api, MarketplaceConfig, UpsertMarketplaceConfigPayload } from '@/lib/api';
 import { isAdmin } from '@/lib/auth';
 import { toastError } from '@/lib/swal';
@@ -14,12 +15,25 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 type SupportedMarketplace = 'shopee' | 'mercadolivre' | 'nuvemshop';
+type FoodPlatform = 'ifood' | 'zedeliver' | 'uairango';
 
 const MARKETPLACE_META: Record<SupportedMarketplace, { label: string; image: string }> = {
   shopee: { label: 'Shopee', image: '/shopee.svg' },
   mercadolivre: { label: 'Mercado Livre', image: '/mercado_livre.svg' },
   nuvemshop: { label: 'Nuvemshop', image: '/nuvemshop.svg' },
 };
+
+const FOOD_META: Record<FoodPlatform, { label: string; image: string }> = {
+  ifood: { label: 'iFood', image: '/ifood.svg' },
+  zedeliver: { label: 'Zé Delivery', image: '/ze_delivery.svg' },
+  uairango: { label: 'UaiRango', image: '/uairango.svg' },
+};
+
+const TABS = [
+  { id: 'marketplace', label: 'Marketplace', items: ['shopee', 'mercadolivre'] as SupportedMarketplace[] },
+  { id: 'catalogo', label: 'Catálogo', items: ['nuvemshop'] as SupportedMarketplace[] },
+  { id: 'food', label: 'Food', items: [] as SupportedMarketplace[] },
+];
 
 function partnerKeyStatus(expiresAt: string | null) {
   if (!expiresAt) return null;
@@ -36,6 +50,7 @@ export default function MarketplaceConfigsPage() {
   const [forms, setForms] = useState<Record<string, UpsertMarketplaceConfigPayload>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('marketplace');
 
   useEffect(() => {
     if (!isAdmin()) { router.push('/dashboard'); return; }
@@ -86,7 +101,7 @@ export default function MarketplaceConfigsPage() {
 
   if (loading) return <div className="text-muted-foreground text-sm">Carregando...</div>;
 
-  const marketplaces: SupportedMarketplace[] = ['shopee', 'mercadolivre', 'nuvemshop'];
+  const currentTab = TABS.find((t) => t.id === activeTab)!;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -99,7 +114,7 @@ export default function MarketplaceConfigsPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Configuração das APIs</h1>
           <p className="text-muted-foreground text-sm">
-            Credenciais de acesso às APIs da Shopee, Mercado Livre e Nuvemshop. Chaves secretas nunca são exibidas após salvar.
+            Credenciais de acesso às APIs dos marketplaces. Chaves secretas nunca são exibidas após salvar.
           </p>
         </div>
         <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto" onClick={load} title="Recarregar">
@@ -107,145 +122,184 @@ export default function MarketplaceConfigsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {marketplaces.map((mp) => {
-          const cfg = configs.find((c) => c.marketplace === mp);
-          const form = forms[mp] ?? {};
-          const isSaving = saving === mp;
-          const { label, image } = MARKETPLACE_META[mp];
-
-          return (
-            <Card key={mp}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Image src={image} alt={label} width={16} height={16} className="w-4 h-4 object-contain" />
-                  {label}
-                  {cfg?.isConfigured
-                    ? (
-                      <Badge variant="success" className="ml-auto text-[10px] flex items-center gap-0.5">
-                        <CheckCircle2 className="w-3 h-3" />Configurado
-                      </Badge>
-                    )
-                    : <Badge variant="outline" className="ml-auto text-[10px]">Pendente</Badge>
-                  }
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Redirect URI</label>
-                  <Input
-                    value={form.redirectUri ?? ''}
-                    onChange={(e) => update(mp, 'redirectUri', e.target.value)}
-                    placeholder="https://app.exemplo.com/callback"
-                    className="h-8 text-sm"
-                  />
-                </div>
-
-                {mp === 'shopee' && (
-                  <>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Partner ID</label>
-                      <Input
-                        value={form.partnerId ?? ''}
-                        onChange={(e) => update(mp, 'partnerId', e.target.value)}
-                        placeholder="12345678"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">
-                        Partner Key{cfg?.hasPartnerKey && <span className="text-green-600 ml-1 font-normal">✓ salva</span>}
-                      </label>
-                      <Input
-                        type="password"
-                        value={form.partnerKey ?? ''}
-                        onChange={(e) => update(mp, 'partnerKey', e.target.value)}
-                        placeholder={cfg?.hasPartnerKey ? '••••••••' : 'Cole a chave aqui'}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">
-                        Validade da Partner Key
-                        {(() => {
-                          const st = partnerKeyStatus(cfg?.partnerKeyExpiresAt ?? null);
-                          if (!st) return null;
-                          const StatusIcon = st.icon;
-                          return (
-                            <Badge variant={st.variant} className="ml-2 text-[10px] inline-flex items-center gap-0.5 py-0">
-                              <StatusIcon className="w-3 h-3" />{st.label}
-                            </Badge>
-                          );
-                        })()}
-                      </label>
-                      <Input
-                        type="date"
-                        value={form.partnerKeyExpiresAt ? form.partnerKeyExpiresAt.slice(0, 10) : ''}
-                        onChange={(e) => update(mp, 'partnerKeyExpiresAt', e.target.value ? new Date(e.target.value).toISOString() : '')}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Ambiente</label>
-                      <select
-                        value={form.env ?? 'sandbox'}
-                        onChange={(e) => update(mp, 'env', e.target.value)}
-                        className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
-                      >
-                        <option value="sandbox">Sandbox</option>
-                        <option value="production">Produção</option>
-                      </select>
-                    </div>
-                  </>
-                )}
-
-                {(mp === 'mercadolivre' || mp === 'nuvemshop') && (
-                  <>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">
-                        {mp === 'nuvemshop' ? 'Client ID' : 'App ID (Client ID)'}
-                      </label>
-                      <Input
-                        value={form.appId ?? ''}
-                        onChange={(e) => update(mp, 'appId', e.target.value)}
-                        placeholder={mp === 'nuvemshop' ? '123456' : '1234567890123456'}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">
-                        Client Secret{cfg?.hasClientSecret && <span className="text-green-600 ml-1 font-normal">✓ salvo</span>}
-                      </label>
-                      <Input
-                        type="password"
-                        value={form.clientSecret ?? ''}
-                        onChange={(e) => update(mp, 'clientSecret', e.target.value)}
-                        placeholder={cfg?.hasClientSecret ? '••••••••' : 'Cole o secret aqui'}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {cfg?.updatedAt && (
-                  <p className="text-[10px] text-muted-foreground">
-                    Atualizado em {new Date(cfg.updatedAt).toLocaleString('pt-BR')}
-                  </p>
-                )}
-
-                <Button
-                  size="sm"
-                  className="w-full"
-                  disabled={isSaving}
-                  onClick={() => handleSave(mp)}
-                >
-                  {isSaving ? 'Salvando...' : 'Salvar'}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
+      <div className="flex gap-1 border-b">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors',
+              activeTab === tab.id
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
+
+      {activeTab === 'food' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {(Object.keys(FOOD_META) as FoodPlatform[]).map((mp) => {
+            const { label, image } = FOOD_META[mp];
+            return (
+              <Card key={mp}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Image src={image} alt={label} width={16} height={16} className="w-4 h-4 object-contain" />
+                    {label}
+                    <Badge variant="outline" className="ml-auto text-[10px]">Em breve</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">Configurações globais em desenvolvimento.</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {currentTab.items.map((mp) => {
+            const cfg = configs.find((c) => c.marketplace === mp);
+            const form = forms[mp] ?? {};
+            const isSaving = saving === mp;
+            const { label, image } = MARKETPLACE_META[mp];
+
+            return (
+              <Card key={mp}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Image src={image} alt={label} width={16} height={16} className="w-4 h-4 object-contain" />
+                    {label}
+                    {cfg?.isConfigured
+                      ? (
+                        <Badge variant="success" className="ml-auto text-[10px] flex items-center gap-0.5">
+                          <CheckCircle2 className="w-3 h-3" />Configurado
+                        </Badge>
+                      )
+                      : <Badge variant="outline" className="ml-auto text-[10px]">Pendente</Badge>
+                    }
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Redirect URI</label>
+                    <Input
+                      value={form.redirectUri ?? ''}
+                      onChange={(e) => update(mp, 'redirectUri', e.target.value)}
+                      placeholder="https://app.exemplo.com/callback"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  {mp === 'shopee' && (
+                    <>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Partner ID</label>
+                        <Input
+                          value={form.partnerId ?? ''}
+                          onChange={(e) => update(mp, 'partnerId', e.target.value)}
+                          placeholder="12345678"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">
+                          Partner Key{cfg?.hasPartnerKey && <span className="text-green-600 ml-1 font-normal">✓ salva</span>}
+                        </label>
+                        <Input
+                          type="password"
+                          value={form.partnerKey ?? ''}
+                          onChange={(e) => update(mp, 'partnerKey', e.target.value)}
+                          placeholder={cfg?.hasPartnerKey ? '••••••••' : 'Cole a chave aqui'}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">
+                          Validade da Partner Key
+                          {(() => {
+                            const st = partnerKeyStatus(cfg?.partnerKeyExpiresAt ?? null);
+                            if (!st) return null;
+                            const StatusIcon = st.icon;
+                            return (
+                              <Badge variant={st.variant} className="ml-2 text-[10px] inline-flex items-center gap-0.5 py-0">
+                                <StatusIcon className="w-3 h-3" />{st.label}
+                              </Badge>
+                            );
+                          })()}
+                        </label>
+                        <Input
+                          type="date"
+                          value={form.partnerKeyExpiresAt ? form.partnerKeyExpiresAt.slice(0, 10) : ''}
+                          onChange={(e) => update(mp, 'partnerKeyExpiresAt', e.target.value ? new Date(e.target.value).toISOString() : '')}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Ambiente</label>
+                        <select
+                          value={form.env ?? 'sandbox'}
+                          onChange={(e) => update(mp, 'env', e.target.value)}
+                          className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                        >
+                          <option value="sandbox">Sandbox</option>
+                          <option value="production">Produção</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {(mp === 'mercadolivre' || mp === 'nuvemshop') && (
+                    <>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">
+                          {mp === 'nuvemshop' ? 'Client ID' : 'App ID (Client ID)'}
+                        </label>
+                        <Input
+                          value={form.appId ?? ''}
+                          onChange={(e) => update(mp, 'appId', e.target.value)}
+                          placeholder={mp === 'nuvemshop' ? '123456' : '1234567890123456'}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">
+                          Client Secret{cfg?.hasClientSecret && <span className="text-green-600 ml-1 font-normal">✓ salvo</span>}
+                        </label>
+                        <Input
+                          type="password"
+                          value={form.clientSecret ?? ''}
+                          onChange={(e) => update(mp, 'clientSecret', e.target.value)}
+                          placeholder={cfg?.hasClientSecret ? '••••••••' : 'Cole o secret aqui'}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {cfg?.updatedAt && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Atualizado em {new Date(cfg.updatedAt).toLocaleString('pt-BR')}
+                    </p>
+                  )}
+
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    disabled={isSaving}
+                    onClick={() => handleSave(mp)}
+                  >
+                    {isSaving ? 'Salvando...' : 'Salvar'}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
