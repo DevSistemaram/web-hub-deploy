@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Pencil, Check, X, Unplug, Plus, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Pencil, Check, X, Unplug, Plus, Eye, EyeOff, Loader2, Clock, ShoppingCart } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { api, Integration } from '@/lib/api';
 import { confirm, toastError, toastSuccess } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
@@ -12,18 +13,34 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type Marketplace = Integration['marketplace'];
+type AllIntegrationTypes = Marketplace | 'uairango' | 'amazon';
 
-const MARKETPLACE_META: Record<Marketplace, { name: string; image?: string; icon?: React.ElementType }> = {
+const INTEGRATION_META: Record<AllIntegrationTypes, { name: string; image?: string; icon?: React.ElementType; comingSoon?: boolean }> = {
   mercadolivre: { name: 'Mercado Livre', image: '/mercado_livre.svg' },
   shopee: { name: 'Shopee', image: '/shopee.svg' },
+  amazon: { name: 'Amazon', icon: ShoppingCart, comingSoon: true },
   ideris: { name: 'Ideris', image: '/ideris.svg' },
   nuvemshop: { name: 'Nuvemshop', image: '/nuvemshop.svg' },
+  ifood: { name: 'iFood', image: '/ifood.svg', comingSoon: true },
+  zedeliver: { name: 'Zé Delivery', image: '/ze_delivery.svg', comingSoon: true },
+  uairango: { name: 'UaiRango', image: '/uairango.svg', comingSoon: true },
 };
+
+const CATEGORIES: { label: string; items: AllIntegrationTypes[] }[] = [
+  { label: 'Marketplace', items: ['mercadolivre', 'shopee', 'amazon'] },
+  { label: 'Catálogo',    items: ['nuvemshop'] },
+  { label: 'Hubs',        items: ['ideris'] },
+  { label: 'Food',        items: ['ifood', 'zedeliver', 'uairango'] },
+];
 
 export default function IntegrationsPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [showIderisModal, setShowIderisModal] = useState(false);
+  const [showIfoodModal, setShowIfoodModal] = useState(false);
+  const [showZeDeliverModal, setShowZeDeliverModal] = useState(false);
+  const [showUaiRangoModal, setShowUaiRangoModal] = useState(false);
+  const [activeTab, setActiveTab] = useState(CATEGORIES[0].label);
 
   async function loadIntegrations() {
     try {
@@ -74,10 +91,15 @@ export default function IntegrationsPage() {
     } catch { toastError('Erro ao salvar nome'); }
   }
 
-  const mlIntegrations = integrations.filter((i) => i.marketplace === 'mercadolivre');
-  const shopeeIntegrations = integrations.filter((i) => i.marketplace === 'shopee');
-  const iderisIntegrations = integrations.filter((i) => i.marketplace === 'ideris');
-  const nuvemshopIntegrations = integrations.filter((i) => i.marketplace === 'nuvemshop');
+  const connectHandlers: Partial<Record<AllIntegrationTypes, () => void>> = {
+    mercadolivre: connectMercadoLivre,
+    shopee: connectShopee,
+    nuvemshop: connectNuvemshop,
+    ideris: () => setShowIderisModal(true),
+    ifood: () => setShowIfoodModal(true),
+    zedeliver: () => setShowZeDeliverModal(true),
+    uairango: () => setShowUaiRangoModal(true),
+  };
 
   return (
     <div className="max-w-3xl">
@@ -87,45 +109,56 @@ export default function IntegrationsPage() {
       </p>
 
       {loading ? (
-        <div className="space-y-6">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="space-y-8">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i}>
-              <Skeleton className="h-6 w-40 mb-3" />
+              <Skeleton className="h-4 w-24 mb-4" />
               <Skeleton className="h-20 w-full rounded-xl" />
             </div>
           ))}
         </div>
       ) : (
-        <div className="space-y-8">
-          <MarketplaceSection
-            marketplace="mercadolivre"
-            integrations={mlIntegrations}
-            onConnect={connectMercadoLivre}
-            onDeactivate={handleDeactivate}
-            onNicknameUpdate={handleNicknameUpdate}
-          />
-          <MarketplaceSection
-            marketplace="shopee"
-            integrations={shopeeIntegrations}
-            onConnect={connectShopee}
-            onDeactivate={handleDeactivate}
-            onNicknameUpdate={handleNicknameUpdate}
-          />
-          <MarketplaceSection
-            marketplace="nuvemshop"
-            integrations={nuvemshopIntegrations}
-            onConnect={connectNuvemshop}
-            onDeactivate={handleDeactivate}
-            onNicknameUpdate={handleNicknameUpdate}
-          />
-          <MarketplaceSection
-            marketplace="ideris"
-            integrations={iderisIntegrations}
-            onConnect={() => setShowIderisModal(true)}
-            onDeactivate={handleDeactivate}
-            onNicknameUpdate={handleNicknameUpdate}
-          />
-        </div>
+        <>
+          <div className="flex gap-1 border-b mb-6">
+            {CATEGORIES.map((cat) => {
+              const count = cat.items.reduce(
+                (acc, type) => acc + integrations.filter((i) => i.marketplace === type).length,
+                0,
+              );
+              return (
+                <button
+                  key={cat.label}
+                  onClick={() => setActiveTab(cat.label)}
+                  className={cn(
+                    'px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors',
+                    activeTab === cat.label
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {cat.label}
+                  {count > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div className="space-y-6">
+            {CATEGORIES.find((cat) => cat.label === activeTab)?.items.map((type) => (
+              <MarketplaceSection
+                key={type}
+                type={type}
+                integrations={integrations.filter((i) => i.marketplace === type)}
+                onConnect={connectHandlers[type] ?? (() => {})}
+                onDeactivate={handleDeactivate}
+                onNicknameUpdate={handleNicknameUpdate}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {showIderisModal && (
@@ -134,20 +167,47 @@ export default function IntegrationsPage() {
           onSuccess={() => { setShowIderisModal(false); loadIntegrations(); }}
         />
       )}
+      {showIfoodModal && (
+        <FoodConnectModal
+          name="iFood"
+          image="/ifood.svg"
+          onClose={() => setShowIfoodModal(false)}
+          onSuccess={() => { setShowIfoodModal(false); loadIntegrations(); }}
+          onConnect={(clientId, clientSecret, nickname) => api.food.connectIfood(clientId, clientSecret, nickname)}
+        />
+      )}
+      {showZeDeliverModal && (
+        <FoodConnectModal
+          name="Zé Delivery"
+          image="/ze_delivery.svg"
+          onClose={() => setShowZeDeliverModal(false)}
+          onSuccess={() => { setShowZeDeliverModal(false); loadIntegrations(); }}
+          onConnect={(clientId, clientSecret, nickname) => api.food.connectZeDeliver(clientId, clientSecret, nickname)}
+        />
+      )}
+      {showUaiRangoModal && (
+        <FoodConnectModal
+          name="UaiRango"
+          image="/uairango.svg"
+          onClose={() => setShowUaiRangoModal(false)}
+          onSuccess={() => { setShowUaiRangoModal(false); loadIntegrations(); }}
+          onConnect={(clientId, clientSecret, nickname) => api.food.connectUairango(clientId, clientSecret, nickname)}
+        />
+      )}
     </div>
   );
 }
 
 function MarketplaceSection({
-  marketplace, integrations, onConnect, onDeactivate, onNicknameUpdate,
+  type, integrations, onConnect, onDeactivate, onNicknameUpdate,
 }: {
-  marketplace: Marketplace;
+  type: AllIntegrationTypes;
   integrations: Integration[];
   onConnect: () => void;
   onDeactivate: (id: string) => void;
   onNicknameUpdate: (id: string, nickname: string) => void;
 }) {
-  const { name, image, icon: Icon } = MARKETPLACE_META[marketplace];
+  const { name, image, icon: Icon, comingSoon } = INTEGRATION_META[type];
 
   return (
     <div>
@@ -165,15 +225,23 @@ function MarketplaceSection({
             </Badge>
           )}
         </div>
-        <Button size="sm" onClick={onConnect}>
-          <Plus className="w-3.5 h-3.5" /> Conectar nova loja
-        </Button>
+        {comingSoon ? (
+          <Button size="sm" disabled>
+            <Clock className="w-3.5 h-3.5" /> Em breve
+          </Button>
+        ) : (
+          <Button size="sm" onClick={onConnect}>
+            <Plus className="w-3.5 h-3.5" /> Conectar nova loja
+          </Button>
+        )}
       </div>
 
       {integrations.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-8 text-center text-muted-foreground text-sm">
-            Nenhuma loja conectada. Clique em &quot;Conectar nova loja&quot; para começar.
+            {comingSoon
+              ? 'Integração em desenvolvimento. Em breve disponível.'
+              : 'Nenhuma loja conectada. Clique em “Conectar nova loja” para começar.'}
           </CardContent>
         </Card>
       ) : (
@@ -262,6 +330,111 @@ function IntegrationRow({ integration, onDeactivate, onNicknameUpdate }: {
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+function FoodConnectModal({
+  name, image, onClose, onSuccess, onConnect,
+}: {
+  name: string;
+  image: string;
+  onClose: () => void;
+  onSuccess: () => void;
+  onConnect: (clientId: string, clientSecret: string, nickname?: string) => Promise<unknown>;
+}) {
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [showSecret, setShowSecret] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clientId.trim() || !clientSecret.trim()) return;
+    setLoading(true);
+    setError('');
+    try {
+      await onConnect(clientId.trim(), clientSecret.trim(), nickname.trim() || undefined);
+      toastSuccess(`${name} conectado com sucesso!`);
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao conectar. Verifique as credenciais e tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <Card className="w-full max-w-md mx-4">
+        <CardContent className="pt-6 pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Image src={image} alt={name} width={20} height={20} className="w-5 h-5 object-contain" />
+              <h2 className="text-lg font-semibold text-foreground">Conectar {name}</h2>
+            </div>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-foreground block mb-1.5">Client ID</label>
+              <Input
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                placeholder="Client ID do Portal Parceiros"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground block mb-1.5">Client Secret</label>
+              <div className="relative">
+                <Input
+                  type={showSecret ? 'text' : 'password'}
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                  placeholder="Client Secret"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecret((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground block mb-1.5">
+                Apelido <span className="text-muted-foreground font-normal">(opcional)</span>
+              </label>
+              <Input
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Ex: Restaurante Centro"
+              />
+            </div>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <div className="flex gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="flex-1" disabled={loading || !clientId.trim() || !clientSecret.trim()}>
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</> : 'Conectar'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
