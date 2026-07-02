@@ -192,8 +192,7 @@ export interface ExportVendasParams {
   startDate: string; // yyyy-mm-dd
   endDate: string; // yyyy-mm-dd
   status?: 'PENDING' | 'APPROVED' | 'SHIPPED' | 'COMPLETED' | 'CANCELLATION' | 'FRAUD';
-  marketplace?: 'mercadolivre' | 'shopee' | 'ideris' | 'nuvemshop';
-  client?: string;
+  integrationId?: string;
 }
 
 export const api = {
@@ -304,9 +303,8 @@ export const api = {
       qs.set('start_date', params.startDate);
       qs.set('end_date', params.endDate);
       if (params.status) qs.set('status', params.status);
-      if (params.marketplace) qs.set('marketplace', params.marketplace);
-      if (params.client) qs.set('client', params.client);
-      return requestBlob(`/erp/orders/export/excel?${qs.toString()}`);
+      if (params.integrationId) qs.set('integrationId', params.integrationId);
+      return requestBlob(`/vendas/export/excel?${qs.toString()}`);
     },
   },
   settings: {

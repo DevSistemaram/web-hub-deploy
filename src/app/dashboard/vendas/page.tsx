@@ -1,21 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FileSpreadsheet } from 'lucide-react';
 import { api, type ExportVendasParams } from '@/lib/api';
 import { downloadBlob } from '@/lib/download';
 import { toastError, toastSuccess } from '@/lib/swal';
 import { Card, CardContent } from '@/components/ui/card';
-import { VendasExportForm } from '@/components/dashboard/VendasExportForm';
+import { VendasExportForm, type VendasIntegrationOption } from '@/components/dashboard/VendasExportForm';
 
 export default function VendasPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [status, setStatus] = useState('');
-  const [marketplace, setMarketplace] = useState('');
-  const [client, setClient] = useState('');
+  const [integrationId, setIntegrationId] = useState('');
+  const [integrations, setIntegrations] = useState<VendasIntegrationOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.integrations.list()
+      .then((list) => setIntegrations(list.filter((i) => i.isActive)))
+      .catch(() => toastError('Não foi possível carregar as integrações.'));
+  }, []);
+
+  function handlePresetSelect(start: string, end: string) {
+    setStartDate(start);
+    setEndDate(end);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,8 +47,7 @@ export default function VendasPage() {
         startDate,
         endDate,
         status: (status || undefined) as ExportVendasParams['status'],
-        marketplace: (marketplace || undefined) as ExportVendasParams['marketplace'],
-        client: client.trim() || undefined,
+        integrationId: integrationId || undefined,
       });
       downloadBlob(blob, `vendas_${startDate}_${endDate}.xlsx`);
       toastSuccess('Planilha exportada com sucesso!');
@@ -63,9 +73,10 @@ export default function VendasPage() {
           <VendasExportForm
             startDate={startDate} onStartDateChange={setStartDate}
             endDate={endDate} onEndDateChange={setEndDate}
+            onPresetSelect={handlePresetSelect}
             status={status} onStatusChange={setStatus}
-            marketplace={marketplace} onMarketplaceChange={setMarketplace}
-            client={client} onClientChange={setClient}
+            integrationId={integrationId} onIntegrationChange={setIntegrationId}
+            integrations={integrations}
             loading={loading}
             error={error}
             onSubmit={handleSubmit}
