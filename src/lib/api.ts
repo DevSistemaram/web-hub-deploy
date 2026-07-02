@@ -14,10 +14,7 @@ function redirectToLogin() {
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? '';
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<Response> {
   const token = getToken();
 
   const hasBody = options.body != null;
@@ -36,6 +33,15 @@ async function request<T>(
     throw new Error('Sessão expirada. Faça login novamente.');
   }
 
+  return response;
+}
+
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const response = await fetchWithAuth(path, options);
+
   if (!response.ok) {
     const err = await response.json().catch(() => ({ message: 'Request failed' }));
     throw new Error(err.message ?? 'Request failed');
@@ -44,9 +50,21 @@ async function request<T>(
   return response.json();
 }
 
+async function requestBlob(path: string, options: RequestInit = {}): Promise<Blob> {
+  const response = await fetchWithAuth(path, options);
+
+  if (!response.ok) {
+    // Error responses are still JSON even though a success response here is binary.
+    const err = await response.json().catch(() => ({ message: 'Request failed' }));
+    throw new Error(err.message ?? 'Request failed');
+  }
+
+  return response.blob();
+}
+
 export interface Integration {
   id: string;
-  marketplace: 'mercadolivre' | 'shopee' | 'ideris' | 'nuvemshop';
+  marketplace: 'mercadolivre' | 'shopee' | 'ideris' | 'nuvemshop' | 'ifood' | 'zedeliver' | 'uairango';
   nickname: string | null;
   shopId: string | null;
   sellerId: string | null;
@@ -170,6 +188,13 @@ export interface UpsertMarketplaceConfigPayload {
   clientSecret?: string;
 }
 
+export interface ExportVendasParams {
+  startDate: string; // yyyy-mm-dd
+  endDate: string; // yyyy-mm-dd
+  status?: 'PENDING' | 'APPROVED' | 'SHIPPED' | 'COMPLETED' | 'CANCELLATION' | 'FRAUD';
+  integrationId?: string;
+}
+
 export const api = {
   auth: {
     validateInvite: (token: string) =>
@@ -254,6 +279,33 @@ export const api = {
       }),
     deactivate: (id: string) =>
       request(`/integrations/${id}`, { method: 'DELETE' }),
+  },
+  food: {
+    connectIfood: (clientId: string, clientSecret: string, nickname?: string) =>
+      request('/food/ifood/connect', {
+        method: 'POST',
+        body: JSON.stringify({ clientId, clientSecret, nickname }),
+      }),
+    connectZeDeliver: (clientId: string, clientSecret: string, nickname?: string) =>
+      request('/food/zedeliver/connect', {
+        method: 'POST',
+        body: JSON.stringify({ clientId, clientSecret, nickname }),
+      }),
+    connectUairango: (clientId: string, clientSecret: string, nickname?: string) =>
+      request('/food/uairango/connect', {
+        method: 'POST',
+        body: JSON.stringify({ clientId, clientSecret, nickname }),
+      }),
+  },
+  vendas: {
+    exportExcel: (params: ExportVendasParams) => {
+      const qs = new URLSearchParams();
+      qs.set('start_date', params.startDate);
+      qs.set('end_date', params.endDate);
+      if (params.status) qs.set('status', params.status);
+      if (params.integrationId) qs.set('integrationId', params.integrationId);
+      return requestBlob(`/vendas/export/excel?${qs.toString()}`);
+    },
   },
   settings: {
     getErpTokens: () => request<ErpToken[]>('/settings/erp-token'),
