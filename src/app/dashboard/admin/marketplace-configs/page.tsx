@@ -3,25 +3,31 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, CheckCircle2, RefreshCw, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, RefreshCw, AlertTriangle, Clock, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { api, MarketplaceConfig, UpsertMarketplaceConfigPayload } from '@/lib/api';
 import { isAdmin } from '@/lib/auth';
-import { toastError } from '@/lib/swal';
+import { toastError, toastSuccess } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-type SupportedMarketplace = 'shopee' | 'mercadolivre' | 'nuvemshop';
+type SupportedMarketplace = 'shopee' | 'mercadolivre' | 'nuvemshop' | 'amazon';
 type FoodPlatform = 'ifood' | 'zedeliver' | 'uairango';
 
 const MARKETPLACE_META: Record<SupportedMarketplace, { label: string; image: string }> = {
   shopee: { label: 'Shopee', image: '/shopee.svg' },
   mercadolivre: { label: 'Mercado Livre', image: '/mercado_livre.svg' },
   nuvemshop: { label: 'Nuvemshop', image: '/nuvemshop.svg' },
+  amazon: { label: 'Amazon', image: '/amazon.svg' },
 };
+
+function defaultRedirectUri(marketplace: SupportedMarketplace) {
+  if (typeof window === 'undefined') return '';
+  return `${window.location.origin}/dashboard/integrations/${marketplace}/callback`;
+}
 
 const FOOD_META: Record<FoodPlatform, { label: string; image: string }> = {
   ifood: { label: 'iFood', image: '/ifood.svg' },
@@ -30,7 +36,7 @@ const FOOD_META: Record<FoodPlatform, { label: string; image: string }> = {
 };
 
 const TABS = [
-  { id: 'marketplace', label: 'Marketplace', items: ['shopee', 'mercadolivre'] as SupportedMarketplace[] },
+  { id: 'marketplace', label: 'Marketplace', items: ['shopee', 'mercadolivre', 'amazon'] as SupportedMarketplace[] },
   { id: 'catalogo', label: 'Catálogo', items: ['nuvemshop'] as SupportedMarketplace[] },
   { id: 'food', label: 'Food', items: [] as SupportedMarketplace[] },
 ];
@@ -65,7 +71,7 @@ export default function MarketplaceConfigsPage() {
       const initial: Record<string, UpsertMarketplaceConfigPayload> = {};
       for (const c of data) {
         initial[c.marketplace] = {
-          redirectUri: c.redirectUri ?? '',
+          redirectUri: c.redirectUri ?? defaultRedirectUri(c.marketplace),
           ...(c.marketplace === 'shopee' ? {
             partnerId: c.partnerId ?? '',
             env: c.env ?? 'sandbox',
@@ -73,6 +79,7 @@ export default function MarketplaceConfigsPage() {
           } : {}),
           ...(c.marketplace === 'mercadolivre' ? { appId: c.appId ?? '' } : {}),
           ...(c.marketplace === 'nuvemshop' ? { appId: c.appId ?? '' } : {}),
+          ...(c.marketplace === 'amazon' ? { appId: c.appId ?? '', env: c.env ?? 'na', partnerId: c.partnerId ?? 'production' } : {}),
         };
       }
       setForms(initial);
@@ -85,6 +92,15 @@ export default function MarketplaceConfigsPage() {
       ...prev,
       [marketplace]: { ...prev[marketplace], [field]: value },
     }));
+  }
+
+  async function handleCopyRedirectUri(mp: SupportedMarketplace) {
+    try {
+      await navigator.clipboard.writeText(defaultRedirectUri(mp));
+      toastSuccess('Redirect URI copiada');
+    } catch {
+      toastError('Não foi possível copiar');
+    }
   }
 
   async function handleSave(marketplace: SupportedMarketplace) {
@@ -186,12 +202,24 @@ export default function MarketplaceConfigsPage() {
                 <CardContent className="space-y-3">
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">Redirect URI</label>
-                    <Input
-                      value={form.redirectUri ?? ''}
-                      onChange={(e) => update(mp, 'redirectUri', e.target.value)}
-                      placeholder="https://app.exemplo.com/callback"
-                      className="h-8 text-sm"
-                    />
+                    <div className="flex gap-1">
+                      <Input
+                        value={form.redirectUri ?? ''}
+                        onChange={(e) => update(mp, 'redirectUri', e.target.value)}
+                        placeholder="https://app.exemplo.com/callback"
+                        className="h-8 text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        title="Copiar Redirect URI gerada pelo sistema"
+                        onClick={() => handleCopyRedirectUri(mp)}
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
 
                   {mp === 'shopee' && (
@@ -252,22 +280,22 @@ export default function MarketplaceConfigsPage() {
                     </>
                   )}
 
-                  {(mp === 'mercadolivre' || mp === 'nuvemshop') && (
+                  {(mp === 'mercadolivre' || mp === 'nuvemshop' || mp === 'amazon') && (
                     <>
                       <div>
                         <label className="text-xs text-muted-foreground mb-1 block">
-                          {mp === 'nuvemshop' ? 'Client ID' : 'App ID (Client ID)'}
+                          {mp === 'nuvemshop' ? 'Client ID' : mp === 'amazon' ? 'Client ID (LWA)' : 'App ID (Client ID)'}
                         </label>
                         <Input
                           value={form.appId ?? ''}
                           onChange={(e) => update(mp, 'appId', e.target.value)}
-                          placeholder={mp === 'nuvemshop' ? '123456' : '1234567890123456'}
+                          placeholder={mp === 'nuvemshop' ? '123456' : mp === 'amazon' ? 'amzn1.application-oa2-client....' : '1234567890123456'}
                           className="h-8 text-sm"
                         />
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground mb-1 block">
-                          Client Secret{cfg?.hasClientSecret && <span className="text-green-600 ml-1 font-normal">✓ salvo</span>}
+                          {mp === 'amazon' ? 'Client Secret (LWA)' : 'Client Secret'}{cfg?.hasClientSecret && <span className="text-green-600 ml-1 font-normal">✓ salvo</span>}
                         </label>
                         <Input
                           type="password"
@@ -277,6 +305,33 @@ export default function MarketplaceConfigsPage() {
                           className="h-8 text-sm"
                         />
                       </div>
+                      {mp === 'amazon' && (
+                        <>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Region</label>
+                            <select
+                              value={form.env ?? 'na'}
+                              onChange={(e) => update(mp, 'env', e.target.value)}
+                              className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                            >
+                              <option value="na">América do Norte (NA)</option>
+                              <option value="eu">Europa (EU)</option>
+                              <option value="fe">Extremo Oriente (FE)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Ambiente</label>
+                            <select
+                              value={form.partnerId ?? 'production'}
+                              onChange={(e) => update(mp, 'partnerId', e.target.value)}
+                              className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                            >
+                              <option value="sandbox">Sandbox</option>
+                              <option value="production">Produção</option>
+                            </select>
+                          </div>
+                        </>
+                      )}
                     </>
                   )}
 
