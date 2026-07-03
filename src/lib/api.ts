@@ -64,7 +64,7 @@ async function requestBlob(path: string, options: RequestInit = {}): Promise<Blo
 
 export interface Integration {
   id: string;
-  marketplace: 'mercadolivre' | 'shopee' | 'ideris' | 'nuvemshop' | 'ifood' | 'zedeliver' | 'uairango';
+  marketplace: 'mercadolivre' | 'shopee' | 'ideris' | 'nuvemshop' | 'ifood' | 'zedeliver' | 'uairango' | 'amazon';
   nickname: string | null;
   shopId: string | null;
   sellerId: string | null;
@@ -116,7 +116,7 @@ export interface AuditLog {
 
 export interface MarketplaceConfig {
   id: string;
-  marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop';
+  marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop' | 'amazon';
   redirectUri: string | null;
   env: string | null;
   isConfigured: boolean;
@@ -237,7 +237,7 @@ export const api = {
     },
     listMarketplaceConfigs: () =>
       request<MarketplaceConfig[]>('/admin/marketplace-configs'),
-    upsertMarketplaceConfig: (marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop', data: UpsertMarketplaceConfigPayload) =>
+    upsertMarketplaceConfig: (marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop' | 'amazon', data: UpsertMarketplaceConfigPayload) =>
       request<{ success: boolean; marketplace: string; isConfigured: boolean }>(
         `/admin/marketplace-configs/${marketplace}`,
         { method: 'PATCH', body: JSON.stringify(data) },
@@ -271,6 +271,12 @@ export const api = {
       request('/integrations/nuvemshop/callback', {
         method: 'POST',
         body: JSON.stringify({ code, nickname }),
+      }),
+    getAmazonAuthUrl: () => request<{ url: string }>('/integrations/amazon/auth-url'),
+    handleAmazonCallback: (code: string, sellingPartnerId: string, nickname?: string) =>
+      request('/integrations/amazon/callback', {
+        method: 'POST',
+        body: JSON.stringify({ spapi_oauth_code: code, selling_partner_id: sellingPartnerId, nickname }),
       }),
     updateNickname: (id: string, nickname: string) =>
       request(`/integrations/${id}/nickname`, {
