@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Pencil, Check, X, Unplug, Plus, Eye, EyeOff, Loader2, Clock, ShoppingCart } from 'lucide-react';
+import { Pencil, Check, X, Unplug, Plus, Eye, EyeOff, Loader2, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api, Integration } from '@/lib/api';
 import { confirm, toastError, toastSuccess } from '@/lib/swal';
@@ -18,7 +18,7 @@ type AllIntegrationTypes = Marketplace | 'uairango' | 'amazon';
 const INTEGRATION_META: Record<AllIntegrationTypes, { name: string; image?: string; icon?: React.ElementType; comingSoon?: boolean }> = {
   mercadolivre: { name: 'Mercado Livre', image: '/mercado_livre.svg' },
   shopee: { name: 'Shopee', image: '/shopee.svg' },
-  amazon: { name: 'Amazon', icon: ShoppingCart, comingSoon: true },
+  amazon: { name: 'Amazon', image: '/amazon.svg' },
   ideris: { name: 'Ideris', image: '/ideris.svg' },
   nuvemshop: { name: 'Nuvemshop', image: '/nuvemshop.svg' },
   ifood: { name: 'iFood', image: '/ifood.svg', comingSoon: true },
@@ -76,6 +76,13 @@ export default function IntegrationsPage() {
     } catch { toastError('Erro ao obter URL da Nuvemshop'); }
   }
 
+  async function connectAmazon() {
+    try {
+      const { url } = await api.integrations.getAmazonAuthUrl();
+      window.location.href = url;
+    } catch { toastError('Erro ao obter URL da Amazon'); }
+  }
+
   async function handleDeactivate(id: string) {
     if (!await confirm('A integração será desconectada e você precisará reconectar para usá-la novamente.', { title: 'Desconectar integração?', confirmText: 'Desconectar', danger: true })) return;
     try {
@@ -95,6 +102,7 @@ export default function IntegrationsPage() {
     mercadolivre: connectMercadoLivre,
     shopee: connectShopee,
     nuvemshop: connectNuvemshop,
+    amazon: connectAmazon,
     ideris: () => setShowIderisModal(true),
     ifood: () => setShowIfoodModal(true),
     zedeliver: () => setShowZeDeliverModal(true),
