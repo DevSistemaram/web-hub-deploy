@@ -62,6 +62,34 @@ async function requestBlob(path: string, options: RequestInit = {}): Promise<Blo
   return response.blob();
 }
 
+export interface ExportMeta {
+  truncated: boolean;
+  failedIntegrations: { marketplace: string; nickname: string | null }[];
+}
+
+async function requestBlobWithMeta(path: string, options: RequestInit = {}): Promise<{ blob: Blob } & ExportMeta> {
+  const response = await fetchWithAuth(path, options);
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ message: 'Request failed' }));
+    throw new Error(err.message ?? 'Request failed');
+  }
+
+  const failedHeader = response.headers.get('X-Export-Failed-Integrations');
+  let failedIntegrations: ExportMeta['failedIntegrations'] = [];
+  if (failedHeader) {
+    try {
+      failedIntegrations = JSON.parse(decodeURIComponent(failedHeader));
+    } catch { /* malformed header — treat as no failures rather than break the download */ }
+  }
+
+  return {
+    blob: await response.blob(),
+    truncated: response.headers.get('X-Export-Truncated') === 'true',
+    failedIntegrations,
+  };
+}
+
 export interface Integration {
   id: string;
   marketplace: 'mercadolivre' | 'shopee' | 'ideris' | 'nuvemshop' | 'ifood' | 'zedeliver' | 'uairango' | 'amazon';
@@ -310,7 +338,7 @@ export const api = {
       qs.set('end_date', params.endDate);
       if (params.status) qs.set('status', params.status);
       if (params.integrationId) qs.set('integrationId', params.integrationId);
-      return requestBlob(`/vendas/export/excel?${qs.toString()}`);
+      return requestBlobWithMeta(`/vendas/export/excel?${qs.toString()}`);
     },
   },
   settings: {
