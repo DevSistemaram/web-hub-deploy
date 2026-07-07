@@ -7,7 +7,7 @@ import Image from 'next/image';
 import {
   LayoutDashboard, Link2, KeyRound, FileText, LogOut, ShieldCheck,
   UserX, ClipboardList, SlidersHorizontal, Moon, Sun, Menu, X, Webhook,
-  FileSpreadsheet,
+  FileSpreadsheet, UtensilsCrossed,
 } from 'lucide-react';
 import { isAuthenticated, getUser, clearToken, isAdmin, isImpersonating, stopImpersonation } from '@/lib/auth';
 import { Button } from '@/components/ui/button';

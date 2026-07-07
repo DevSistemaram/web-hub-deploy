@@ -102,6 +102,59 @@ export interface Integration {
   refreshTokenExpiresAt: string | null;
 }
 
+export type FoodPlatform = 'ifood' | 'uairango';
+
+export type FoodOrderStatus =
+  | 'PLACED'
+  | 'CONFIRMED'
+  | 'PREPARING'
+  | 'READY'
+  | 'DISPATCHED'
+  | 'CONCLUDED'
+  | 'CANCELLED';
+
+export type FoodOrderAction =
+  | 'confirm'
+  | 'startPreparation'
+  | 'readyToPickup'
+  | 'dispatch'
+  | 'requestCancellation';
+
+export interface FoodOrderItem {
+  sku: string | null;
+  title: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  observations?: string | null;
+}
+
+export interface FoodOrder {
+  id: string;
+  integrationId: string;
+  platformOrderId: string;
+  displayId: string;
+  platform: FoodPlatform;
+  status: FoodOrderStatus;
+  rawStatus: string;
+  orderType: string;
+  createdAt: string;
+  customer: { name: string; phone: string | null; document: string | null };
+  items: FoodOrderItem[];
+  financial: { subtotal: number; deliveryFee: number; discount: number; total: number; currency: string };
+  address: {
+    street: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  } | null;
+  paymentMethod: string | null;
+  merchantId: string | null;
+  merchantName: string | null;
+}
+
 export interface ErpToken {
   id: string;
   label: string;
@@ -329,6 +382,19 @@ export const api = {
       request('/food/uairango/connect', {
         method: 'POST',
         body: JSON.stringify({ clientId, clientSecret, nickname }),
+      }),
+    listOrders: (filters?: { platform?: FoodPlatform; status?: FoodOrderStatus }) => {
+      const qs = new URLSearchParams();
+      if (filters?.platform) qs.set('platform', filters.platform);
+      if (filters?.status) qs.set('status', filters.status);
+      const suffix = qs.toString() ? `?${qs.toString()}` : '';
+      return request<FoodOrder[]>(`/food/orders${suffix}`);
+    },
+    getOrder: (id: string) => request<FoodOrder>(`/food/orders/${id}`),
+    updateOrderStatus: (id: string, action: FoodOrderAction, reason?: string) =>
+      request<{ success: boolean; status: FoodOrderStatus }>(`/food/orders/${id}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ action, reason }),
       }),
   },
   vendas: {

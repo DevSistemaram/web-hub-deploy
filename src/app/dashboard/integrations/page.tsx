@@ -21,16 +21,16 @@ const INTEGRATION_META: Record<AllIntegrationTypes, { name: string; image?: stri
   amazon: { name: 'Amazon', image: '/amazon.svg' },
   ideris: { name: 'Ideris', image: '/ideris.svg' },
   nuvemshop: { name: 'Nuvemshop', image: '/nuvemshop.svg' },
-  ifood: { name: 'iFood', image: '/ifood.svg', comingSoon: true },
+  ifood: { name: 'iFood', image: '/ifood.svg' },
+  uairango: { name: 'UaiRango', image: '/uairango.svg' },
   zedeliver: { name: 'Zé Delivery', image: '/ze_delivery.svg', comingSoon: true },
-  uairango: { name: 'UaiRango', image: '/uairango.svg', comingSoon: true },
 };
 
 const CATEGORIES: { label: string; items: AllIntegrationTypes[] }[] = [
   { label: 'Marketplace', items: ['mercadolivre', 'shopee', 'amazon'] },
   { label: 'Catálogo',    items: ['nuvemshop'] },
   { label: 'Hubs',        items: ['ideris'] },
-  { label: 'Food',        items: ['ifood', 'zedeliver', 'uairango'] },
+  { label: 'Food',        items: ['ifood','uairango','zedeliver'] },
 ];
 
 export default function IntegrationsPage() {
