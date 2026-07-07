@@ -25,6 +25,7 @@ const adminNavItems = [
   { href: '/dashboard/admin', label: 'Admin', icon: ShieldCheck, exact: true },
   { href: '/dashboard/admin/audit-logs', label: 'Audit Log', icon: ClipboardList, exact: false },
   { href: '/dashboard/admin/marketplace-configs', label: 'Config. APIs', icon: SlidersHorizontal, exact: false },
+  { href: '/dashboard/admin/food-orders', label: 'Pedidos Food', icon: UtensilsCrossed, exact: false },
   { href: '/dashboard/webhook-tester', label: 'Teste Webhook', icon: Webhook, exact: false },
 ];
 
