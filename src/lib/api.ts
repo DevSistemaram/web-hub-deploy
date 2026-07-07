@@ -368,10 +368,16 @@ export const api = {
       request(`/integrations/${id}`, { method: 'DELETE' }),
   },
   food: {
-    connectIfood: (clientId: string, clientSecret: string, nickname?: string) =>
-      request('/food/ifood/connect', {
+    // iFood app distribuído (Autenticação Centralizada / userCode) — 2 passos.
+    startIfoodConnection: () =>
+      request<{ userCode: string; verificationUrlComplete: string; authorizationCodeVerifier: string; expiresIn: number }>(
+        '/food/ifood/connect/start',
+        { method: 'POST' },
+      ),
+    completeIfoodConnection: (authorizationCode: string, authorizationCodeVerifier: string, nickname?: string) =>
+      request('/food/ifood/connect/complete', {
         method: 'POST',
-        body: JSON.stringify({ clientId, clientSecret, nickname }),
+        body: JSON.stringify({ authorizationCode, authorizationCodeVerifier, nickname }),
       }),
     connectZeDeliver: (clientId: string, clientSecret: string, nickname?: string) =>
       request('/food/zedeliver/connect', {
