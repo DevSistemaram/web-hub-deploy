@@ -197,7 +197,7 @@ export interface AuditLog {
 
 export interface MarketplaceConfig {
   id: string;
-  marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop' | 'amazon';
+  marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop' | 'amazon' | 'ifood' | 'uairango';
   redirectUri: string | null;
   env: string | null;
   isConfigured: boolean;
@@ -318,7 +318,7 @@ export const api = {
     },
     listMarketplaceConfigs: () =>
       request<MarketplaceConfig[]>('/admin/marketplace-configs'),
-    upsertMarketplaceConfig: (marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop' | 'amazon', data: UpsertMarketplaceConfigPayload) =>
+    upsertMarketplaceConfig: (marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop' | 'amazon' | 'ifood' | 'uairango', data: UpsertMarketplaceConfigPayload) =>
       request<{ success: boolean; marketplace: string; isConfigured: boolean }>(
         `/admin/marketplace-configs/${marketplace}`,
         { method: 'PATCH', body: JSON.stringify(data) },

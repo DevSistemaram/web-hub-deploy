@@ -16,6 +16,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 type SupportedMarketplace = 'shopee' | 'mercadolivre' | 'nuvemshop' | 'amazon';
 type FoodPlatform = 'ifood' | 'zedeliver' | 'uairango';
+// Plataformas de food configuráveis pelo admin (Zé fica como placeholder)
+type ConfigurableFoodPlatform = 'ifood' | 'uairango';
+type ConfigurableMarketplace = SupportedMarketplace | ConfigurableFoodPlatform;
+const CONFIGURABLE_FOOD: ConfigurableFoodPlatform[] = ['ifood', 'uairango'];
 
 const MARKETPLACE_META: Record<SupportedMarketplace, { label: string; image: string }> = {
   shopee: { label: 'Shopee', image: '/shopee.svg' },
@@ -24,7 +28,7 @@ const MARKETPLACE_META: Record<SupportedMarketplace, { label: string; image: str
   amazon: { label: 'Amazon', image: '/amazon.svg' },
 };
 
-function defaultRedirectUri(marketplace: SupportedMarketplace) {
+function defaultRedirectUri(marketplace: MarketplaceConfig['marketplace']) {
   if (typeof window === 'undefined') return '';
   return `${window.location.origin}/dashboard/integrations/${marketplace}/callback`;
 }
@@ -70,8 +74,10 @@ export default function MarketplaceConfigsPage() {
       setConfigs(data);
       const initial: Record<string, UpsertMarketplaceConfigPayload> = {};
       for (const c of data) {
+        const isFood = c.marketplace === 'ifood' || c.marketplace === 'uairango';
         initial[c.marketplace] = {
-          redirectUri: c.redirectUri ?? defaultRedirectUri(c.marketplace),
+          // Food usa direct grant (sem redirectUri); demais marketplaces são OAuth redirect
+          ...(isFood ? {} : { redirectUri: c.redirectUri ?? defaultRedirectUri(c.marketplace) }),
           ...(c.marketplace === 'shopee' ? {
             partnerId: c.partnerId ?? '',
             env: c.env ?? 'sandbox',
@@ -80,6 +86,8 @@ export default function MarketplaceConfigsPage() {
           ...(c.marketplace === 'mercadolivre' ? { appId: c.appId ?? '' } : {}),
           ...(c.marketplace === 'nuvemshop' ? { appId: c.appId ?? '' } : {}),
           ...(c.marketplace === 'amazon' ? { appId: c.appId ?? '', env: c.env ?? 'na', partnerId: c.partnerId ?? 'production' } : {}),
+          ...(c.marketplace === 'ifood' ? { appId: c.appId ?? '' } : {}),
+          ...(c.marketplace === 'uairango' ? { appId: c.appId ?? '', env: c.env ?? 'sandbox' } : {}),
         };
       }
       setForms(initial);
@@ -103,7 +111,7 @@ export default function MarketplaceConfigsPage() {
     }
   }
 
-  async function handleSave(marketplace: SupportedMarketplace) {
+  async function handleSave(marketplace: ConfigurableMarketplace) {
     setSaving(marketplace);
     try {
       await api.admin.upsertMarketplaceConfig(marketplace, forms[marketplace] ?? {});
@@ -159,17 +167,96 @@ export default function MarketplaceConfigsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {(Object.keys(FOOD_META) as FoodPlatform[]).map((mp) => {
             const { label, image } = FOOD_META[mp];
+
+            // Zé Delivery: ainda não configurável pelo admin
+            if (!CONFIGURABLE_FOOD.includes(mp as ConfigurableFoodPlatform)) {
+              return (
+                <Card key={mp}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Image src={image} alt={label} width={16} height={16} className="w-4 h-4 object-contain" />
+                      {label}
+                      <Badge variant="outline" className="ml-auto text-[10px]">Em breve</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">Configurações globais em desenvolvimento.</p>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            const foodMp = mp as ConfigurableFoodPlatform;
+            const cfg = configs.find((c) => c.marketplace === foodMp);
+            const form = forms[foodMp] ?? {};
+            const isSaving = saving === foodMp;
+
             return (
               <Card key={mp}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Image src={image} alt={label} width={16} height={16} className="w-4 h-4 object-contain" />
                     {label}
-                    <Badge variant="outline" className="ml-auto text-[10px]">Em breve</Badge>
+                    {cfg?.isConfigured
+                      ? (
+                        <Badge variant="success" className="ml-auto text-[10px] flex items-center gap-0.5">
+                          <CheckCircle2 className="w-3 h-3" />Configurado
+                        </Badge>
+                      )
+                      : <Badge variant="outline" className="ml-auto text-[10px]">Pendente</Badge>
+                    }
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">Configurações globais em desenvolvimento.</p>
+                <CardContent className="space-y-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Client ID</label>
+                    <Input
+                      value={form.appId ?? ''}
+                      onChange={(e) => update(foodMp, 'appId', e.target.value)}
+                      placeholder="Cole o Client ID aqui"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">
+                      Client Secret{cfg?.hasClientSecret && <span className="text-green-600 ml-1 font-normal">✓ salvo</span>}
+                    </label>
+                    <Input
+                      type="password"
+                      value={form.clientSecret ?? ''}
+                      onChange={(e) => update(foodMp, 'clientSecret', e.target.value)}
+                      placeholder={cfg?.hasClientSecret ? '••••••••' : 'Cole o secret aqui'}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  {foodMp === 'uairango' && (
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Ambiente</label>
+                      <select
+                        value={form.env ?? 'sandbox'}
+                        onChange={(e) => update(foodMp, 'env', e.target.value)}
+                        className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                      >
+                        <option value="sandbox">Sandbox</option>
+                        <option value="production">Produção</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {cfg?.updatedAt && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Atualizado em {new Date(cfg.updatedAt).toLocaleString('pt-BR')}
+                    </p>
+                  )}
+
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    disabled={isSaving}
+                    onClick={() => handleSave(foodMp)}
+                  >
+                    {isSaving ? 'Salvando...' : 'Salvar'}
+                  </Button>
                 </CardContent>
               </Card>
             );
