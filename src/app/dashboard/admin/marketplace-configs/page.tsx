@@ -111,6 +111,21 @@ export default function MarketplaceConfigsPage() {
     }
   }
 
+  function ifoodWebhookUrl() {
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL
+      || (typeof window !== 'undefined' ? window.location.origin : '');
+    return `${base}/api/food/ifood/webhook`;
+  }
+
+  async function handleCopyWebhookUrl() {
+    try {
+      await navigator.clipboard.writeText(ifoodWebhookUrl());
+      toastSuccess('URL do webhook copiada');
+    } catch {
+      toastError('Não foi possível copiar');
+    }
+  }
+
   async function handleSave(marketplace: ConfigurableMarketplace) {
     setSaving(marketplace);
     try {
@@ -241,6 +256,45 @@ export default function MarketplaceConfigsPage() {
                         <option value="production">Produção</option>
                       </select>
                     </div>
+                  )}
+
+                  {foodMp === 'ifood' && (
+                    <>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">URL do Webhook</label>
+                        <div className="flex gap-1">
+                          <Input value={ifoodWebhookUrl()} readOnly className="h-8 text-sm" />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            title="Copiar URL do webhook"
+                            onClick={() => handleCopyWebhookUrl()}
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Cadastre esta URL no portal do iFood (app centralizado).
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">
+                          Webhook Secret{cfg?.hasWebhookSecret && <span className="text-green-600 ml-1 font-normal">✓ salvo</span>}
+                        </label>
+                        <Input
+                          type="password"
+                          value={form.webhookSecret ?? ''}
+                          onChange={(e) => update(foodMp, 'webhookSecret', e.target.value)}
+                          placeholder={cfg?.hasWebhookSecret ? '••••••••' : 'Secret para validar a assinatura'}
+                          className="h-8 text-sm"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Vazio = usa o Client Secret (iFood assina com ele).
+                        </p>
+                      </div>
+                    </>
                   )}
 
                   {cfg?.updatedAt && (
