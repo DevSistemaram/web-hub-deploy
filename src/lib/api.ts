@@ -209,6 +209,8 @@ export interface MarketplaceConfig {
   // ML + Nuvemshop
   appId: string | null;
   hasClientSecret: boolean;
+  // iFood: webhook signature secret (mascarado)
+  hasWebhookSecret: boolean;
 }
 
 export interface ShopeeBrOnboardingInfo {
@@ -267,6 +269,7 @@ export interface UpsertMarketplaceConfigPayload {
   partnerKeyExpiresAt?: string;
   appId?: string;
   clientSecret?: string;
+  webhookSecret?: string;
 }
 
 export interface ExportVendasParams {
@@ -368,17 +371,12 @@ export const api = {
       request(`/integrations/${id}`, { method: 'DELETE' }),
   },
   food: {
-    // iFood app distribuído (Autenticação Centralizada / userCode) — 2 passos.
-    startIfoodConnection: () =>
-      request<{ userCode: string; verificationUrlComplete: string; authorizationCodeVerifier: string; expiresIn: number }>(
-        '/food/ifood/connect/start',
-        { method: 'POST' },
+    // iFood app centralizado: lê creds do admin, lista merchants e cria integrações.
+    connectIfood: (nickname?: string) =>
+      request<{ success: boolean; marketplace: string; merchants: number; created?: number }>(
+        '/food/ifood/connect',
+        { method: 'POST', body: JSON.stringify({ nickname }) },
       ),
-    completeIfoodConnection: (authorizationCode: string, authorizationCodeVerifier: string, nickname?: string) =>
-      request('/food/ifood/connect/complete', {
-        method: 'POST',
-        body: JSON.stringify({ authorizationCode, authorizationCodeVerifier, nickname }),
-      }),
     connectZeDeliver: (clientId: string, clientSecret: string, nickname?: string) =>
       request('/food/zedeliver/connect', {
         method: 'POST',
