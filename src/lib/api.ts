@@ -153,6 +153,7 @@ export interface FoodOrder {
   paymentMethod: string | null;
   merchantId: string | null;
   merchantName: string | null;
+  requiresDeliveryCode?: boolean;
 }
 
 export interface ErpToken {

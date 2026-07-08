@@ -188,6 +188,9 @@ export default function FoodOrdersTestPage() {
                         <Badge variant={statusVariant(order.status)} className="text-[10px]">
                           {FOOD_STATUS_LABEL[order.status] ?? order.status}
                         </Badge>
+                        {order.requiresDeliveryCode && (
+                          <Badge variant="warning" className="text-[10px]">Código na entrega</Badge>
+                        )}
                         <span className="ml-auto text-xs font-normal text-muted-foreground">
                           {order.createdAt ? new Date(order.createdAt).toLocaleString('pt-BR') : ''}
                         </span>
