@@ -115,7 +115,6 @@ export type FoodOrderStatus =
 
 export type FoodOrderAction =
   | 'confirm'
-  | 'startPreparation'
   | 'readyToPickup'
   | 'dispatch'
   | 'requestCancellation';

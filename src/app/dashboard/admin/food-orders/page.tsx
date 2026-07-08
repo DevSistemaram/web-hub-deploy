@@ -24,16 +24,16 @@ const FOOD_STATUS_LABEL: Record<FoodOrderStatus, string> = {
 
 const FOOD_ACTION_LABEL: Record<FoodOrderAction, string> = {
   confirm: 'Confirmar',
-  startPreparation: 'Iniciar preparo',
   readyToPickup: 'Marcar pronto',
   dispatch: 'Despachar',
   requestCancellation: 'Cancelar',
 };
 
 // Ações válidas por status — só decide quais botões mostrar; backend revalida via canTransition.
+// iFood: confirmar já é preparo (confirm leva de Novo → Em preparo).
 const FOOD_TRANSITIONS: Record<FoodOrderStatus, FoodOrderAction[]> = {
   PLACED: ['confirm', 'requestCancellation'],
-  CONFIRMED: ['startPreparation', 'readyToPickup', 'dispatch', 'requestCancellation'],
+  CONFIRMED: ['readyToPickup', 'dispatch', 'requestCancellation'],
   PREPARING: ['readyToPickup', 'dispatch', 'requestCancellation'],
   READY: ['dispatch', 'requestCancellation'],
   DISPATCHED: [],
