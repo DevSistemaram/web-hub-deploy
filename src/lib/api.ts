@@ -209,8 +209,6 @@ export interface MarketplaceConfig {
   // ML + Nuvemshop
   appId: string | null;
   hasClientSecret: boolean;
-  // iFood: webhook signature secret (mascarado)
-  hasWebhookSecret: boolean;
 }
 
 export interface ShopeeBrOnboardingInfo {
@@ -269,7 +267,6 @@ export interface UpsertMarketplaceConfigPayload {
   partnerKeyExpiresAt?: string;
   appId?: string;
   clientSecret?: string;
-  webhookSecret?: string;
 }
 
 export interface ExportVendasParams {
