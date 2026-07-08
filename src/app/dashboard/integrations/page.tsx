@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Pencil, Check, X, Unplug, Plus, Eye, EyeOff, Loader2, Clock } from 'lucide-react';
+import { Pencil, Check, X, Unplug, Plus, Eye, EyeOff, Loader2, Clock, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api, Integration } from '@/lib/api';
 import { confirm, toastError, toastSuccess } from '@/lib/swal';
@@ -37,6 +37,7 @@ export default function IntegrationsPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [showIderisModal, setShowIderisModal] = useState(false);
+  const [showIfoodModal, setShowIfoodModal] = useState(false);
   const [showZeDeliverModal, setShowZeDeliverModal] = useState(false);
   const [showUaiRangoModal, setShowUaiRangoModal] = useState(false);
   const [activeTab, setActiveTab] = useState(CATEGORIES[0].label);
@@ -59,17 +60,6 @@ export default function IntegrationsPage() {
       sessionStorage.setItem('ml_code_verifier', codeVerifier);
       window.location.href = url;
     } catch { toastError('Erro ao obter URL do Mercado Livre'); }
-  }
-
-  async function connectIfood() {
-    // App centralizado: sem OAuth/modal — lê creds do admin, lista merchants e cria integrações.
-    try {
-      const res = await api.food.connectIfood();
-      toastSuccess(res.merchants > 0 ? `iFood conectado (${res.merchants} loja(s))` : 'iFood conectado');
-      await loadIntegrations();
-    } catch (err) {
-      toastError(err instanceof Error ? err.message : 'Erro ao conectar iFood. Configure as credenciais em Config. APIs.');
-    }
   }
 
   async function connectShopee() {
@@ -114,7 +104,7 @@ export default function IntegrationsPage() {
     nuvemshop: connectNuvemshop,
     amazon: connectAmazon,
     ideris: () => setShowIderisModal(true),
-    ifood: connectIfood,
+    ifood: () => setShowIfoodModal(true),
     zedeliver: () => setShowZeDeliverModal(true),
     uairango: () => setShowUaiRangoModal(true),
   };
@@ -183,6 +173,12 @@ export default function IntegrationsPage() {
         <IderisModal
           onClose={() => setShowIderisModal(false)}
           onSuccess={() => { setShowIderisModal(false); loadIntegrations(); }}
+        />
+      )}
+      {showIfoodModal && (
+        <IfoodConnectModal
+          onClose={() => setShowIfoodModal(false)}
+          onSuccess={() => { setShowIfoodModal(false); loadIntegrations(); }}
         />
       )}
       {showZeDeliverModal && (
@@ -441,6 +437,134 @@ function FoodConnectModal({
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// iFood: onboarding da loja via userCode. Passo 1 (ao abrir): gera userCode + link
+// do portal. Passo 2: a loja autoriza no portal e cola o authorizationCode gerado.
+function IfoodConnectModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [starting, setStarting] = useState(true);
+  const [startError, setStartError] = useState('');
+  const [userCode, setUserCode] = useState('');
+  const [verificationUrl, setVerificationUrl] = useState('');
+  const [verifier, setVerifier] = useState('');
+
+  const [authorizationCode, setAuthorizationCode] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await api.food.startIfoodConnection();
+        if (!active) return;
+        setUserCode(res.userCode);
+        setVerificationUrl(res.verificationUrlComplete);
+        setVerifier(res.authorizationCodeVerifier);
+      } catch (err) {
+        if (!active) return;
+        setStartError(err instanceof Error ? err.message : 'Erro ao iniciar a conexão. Configure o iFood em Config. APIs.');
+      } finally {
+        if (active) setStarting(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!authorizationCode.trim()) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await api.food.completeIfoodConnection(authorizationCode.trim(), verifier, nickname.trim() || undefined);
+      toastSuccess('iFood conectado com sucesso!');
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao concluir. Verifique o código e tente novamente.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <Card className="w-full max-w-md mx-4">
+        <CardContent className="pt-6 pb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Image src="/ifood.svg" alt="iFood" width={20} height={20} className="w-5 h-5 object-contain" />
+              <h2 className="text-lg font-semibold text-foreground">Conectar iFood</h2>
+            </div>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {starting ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-6 justify-center">
+              <Loader2 className="w-4 h-4 animate-spin" /> Gerando código de autorização...
+            </div>
+          ) : startError ? (
+            <div className="space-y-4">
+              <p className="text-sm text-destructive">{startError}</p>
+              <Button variant="outline" onClick={onClose} className="w-full">Fechar</Button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">1. Código de autorização</p>
+                  <p className="text-2xl font-bold tracking-widest text-foreground">{userCode}</p>
+                </div>
+                <a href={verificationUrl} target="_blank" rel="noopener noreferrer" className="block">
+                  <Button type="button" variant="outline" className="w-full">
+                    <ExternalLink className="w-4 h-4" /> Abrir portal do iFood
+                  </Button>
+                </a>
+                <p className="text-xs text-muted-foreground">
+                  Abra o portal, autorize a loja com o código acima e cole o código gerado abaixo.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-1.5">2. Código gerado pelo portal</label>
+                <Input
+                  value={authorizationCode}
+                  onChange={(e) => setAuthorizationCode(e.target.value)}
+                  placeholder="Cole aqui o authorization code"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-1.5">
+                  Apelido <span className="text-muted-foreground font-normal">(opcional)</span>
+                </label>
+                <Input
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="Ex: Restaurante Centro"
+                />
+              </div>
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
+
+              <div className="flex gap-2 pt-1">
+                <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={submitting}>
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex-1" disabled={submitting || !authorizationCode.trim()}>
+                  {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Concluindo...</> : 'Concluir'}
+                </Button>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

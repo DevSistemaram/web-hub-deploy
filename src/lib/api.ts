@@ -371,12 +371,17 @@ export const api = {
       request(`/integrations/${id}`, { method: 'DELETE' }),
   },
   food: {
-    // iFood app centralizado: lê creds do admin, lista merchants e cria integrações.
-    connectIfood: (nickname?: string) =>
-      request<{ success: boolean; marketplace: string; merchants: number; created?: number }>(
-        '/food/ifood/connect',
-        { method: 'POST', body: JSON.stringify({ nickname }) },
+    // iFood app centralizado — onboarding da loja via userCode (2 passos).
+    startIfoodConnection: () =>
+      request<{ userCode: string; verificationUrlComplete: string; authorizationCodeVerifier: string; expiresIn: number }>(
+        '/food/ifood/connect/start',
+        { method: 'POST' },
       ),
+    completeIfoodConnection: (authorizationCode: string, authorizationCodeVerifier: string, nickname?: string) =>
+      request('/food/ifood/connect/complete', {
+        method: 'POST',
+        body: JSON.stringify({ authorizationCode, authorizationCodeVerifier, nickname }),
+      }),
     connectZeDeliver: (clientId: string, clientSecret: string, nickname?: string) =>
       request('/food/zedeliver/connect', {
         method: 'POST',
