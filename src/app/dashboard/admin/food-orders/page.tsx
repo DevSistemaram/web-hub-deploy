@@ -5,7 +5,15 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { ArrowLeft, RefreshCw, UtensilsCrossed } from 'lucide-react';
-import { api, Integration, FoodOrder, FoodOrderStatus, FoodOrderAction, FoodOrderActionParams } from '@/lib/api';
+import {
+  api,
+  Integration,
+  FoodOrder,
+  FoodOrderStatus,
+  FoodOrderAction,
+  FoodOrderActionParams,
+  FoodCancellationReason,
+} from '@/lib/api';
 import { isAdmin } from '@/lib/auth';
 import { toastError, toastSuccess } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
@@ -42,17 +50,6 @@ const FOOD_TRANSITIONS: Record<FoodOrderStatus, FoodOrderAction[]> = {
   CANCELLED: [],
 };
 
-const FOOD_CANCELLATION_REASONS = [
-  { code: '501', label: 'Item indisponível' },
-  { code: '502', label: 'Restaurante fechado' },
-  { code: '503', label: 'Cardápio desatualizado' },
-  { code: '504', label: 'Pedido fora da área de entrega' },
-  { code: '505', label: 'Cliente solicitou o cancelamento' },
-  { code: '506', label: 'Problemas operacionais' },
-  { code: '507', label: 'Problemas sistêmicos' },
-  { code: '508', label: 'Outro motivo' },
-] as const;
-
 function statusVariant(status: FoodOrderStatus): 'success' | 'warning' | 'destructive' | 'outline' {
   if (status === 'CONCLUDED') return 'success';
   if (status === 'CANCELLED') return 'destructive';
@@ -64,10 +61,25 @@ function money(v: number, currency = 'BRL') {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(v ?? 0);
 }
 
+// Consulta obrigatória (homologação): busca na plataforma os motivos/códigos válidos
+// pra ESSE pedido antes de abrir o diálogo de cancelamento — nunca uma lista fixa local.
 async function requestCancellationParams(order: FoodOrder): Promise<FoodOrderActionParams | null> {
-  const options = FOOD_CANCELLATION_REASONS.map(
-    (reason) => `<option value="${reason.code}">${reason.code} - ${reason.label}</option>`,
-  ).join('');
+  let reasons: FoodCancellationReason[] = [];
+  try {
+    reasons = await api.food.getCancellationReasons(order.id);
+  } catch (err) {
+    toastError(err instanceof Error ? err.message : 'Erro ao consultar motivos de cancelamento');
+    return null;
+  }
+
+  if (!reasons.length) {
+    toastError('Nenhum motivo de cancelamento disponível pra este pedido');
+    return null;
+  }
+
+  const options = reasons
+    .map((reason) => `<option value="${reason.cancelCodeId}">${reason.cancelCodeId} - ${reason.description}</option>`)
+    .join('');
 
   const result = await Swal.fire<FoodOrderActionParams>({
     title: `Cancelar pedido #${order.displayId || order.platformOrderId}`,
@@ -100,8 +112,8 @@ async function requestCancellationParams(order: FoodOrder): Promise<FoodOrderAct
         Swal.showValidationMessage('Selecione o motivo do cancelamento');
         return false;
       }
-      const selected = FOOD_CANCELLATION_REASONS.find((reason) => reason.code === cancellationCode);
-      const reason = reasonInput?.value.trim() || selected?.label || 'Cancelado pelo lojista';
+      const selected = reasons.find((reason) => reason.cancelCodeId === cancellationCode);
+      const reason = reasonInput?.value.trim() || selected?.description || 'Cancelado pelo lojista';
       return { cancellationCode, reason };
     },
   });
@@ -259,6 +271,20 @@ export default function FoodOrdersTestPage() {
                         <p>
                           {order.items?.length ?? 0} item(s) · Total {money(order.financial?.total ?? 0, order.financial?.currency)}
                         </p>
+                        <p>
+                          Pagamento: {order.paymentType ?? order.paymentMethod ?? '—'}
+                          {order.cardBrand ? ` (${order.cardBrand})` : ''}
+                          {order.changeFor != null ? ` · Troco para ${money(order.changeFor, order.financial?.currency)}` : ''}
+                        </p>
+                        {order.discounts?.length > 0 && (
+                          <p>
+                            Cupom: {money(
+                              order.discounts.reduce((sum, d) => sum + d.value, 0),
+                              order.financial?.currency,
+                            )}{' '}
+                            ({order.discounts.map((d) => `${d.description}: banca ${d.target}`).join('; ')})
+                          </p>
+                        )}
                       </div>
 
                       {order.items?.length > 0 && (

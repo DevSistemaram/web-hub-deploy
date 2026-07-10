@@ -158,6 +158,16 @@ export interface FoodOrder {
   merchantId: string | null;
   merchantName: string | null;
   requiresDeliveryCode?: boolean;
+  paymentType: string | null;
+  cardBrand: string | null;
+  prepaid: boolean;
+  changeFor: number | null;
+  discounts: Array<{ target: string; description: string; value: number }>;
+}
+
+export interface FoodCancellationReason {
+  cancelCodeId: string;
+  description: string;
 }
 
 export interface ErpToken {
@@ -389,10 +399,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ clientId, clientSecret, nickname }),
       }),
-    connectUairango: (clientId: string, clientSecret: string, nickname?: string) =>
-      request('/food/uairango/connect', {
+    // UaiRango app centralizado — onboarding da loja via userCode (2 passos).
+    startUairangoConnection: () =>
+      request<{ userCode: string; verificationUrlComplete: string; authorizationCodeVerifier: string; expiresIn: number }>(
+        '/food/uairango/connect/start',
+        { method: 'POST' },
+      ),
+    completeUairangoConnection: (authorizationCode: string, authorizationCodeVerifier: string, nickname?: string) =>
+      request('/food/uairango/connect/complete', {
         method: 'POST',
-        body: JSON.stringify({ clientId, clientSecret, nickname }),
+        body: JSON.stringify({ authorizationCode, authorizationCodeVerifier, nickname }),
       }),
     listOrders: (filters?: { platform?: FoodPlatform; status?: FoodOrderStatus }) => {
       const qs = new URLSearchParams();
@@ -407,6 +423,9 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ action, ...params }),
       }),
+    // Consulta obrigatória (homologação) antes de requestCancellation.
+    getCancellationReasons: (id: string) =>
+      request<FoodCancellationReason[]>(`/food/orders/${id}/cancellation-reasons`),
   },
   vendas: {
     exportExcel: (params: ExportVendasParams) => {
