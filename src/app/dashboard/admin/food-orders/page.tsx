@@ -112,7 +112,7 @@ async function requestCancellationParams(order: FoodOrder): Promise<FoodOrderAct
         Swal.showValidationMessage('Selecione o motivo do cancelamento');
         return false;
       }
-      const selected = reasons.find((reason) => reason.cancelCodeId === cancellationCode);
+      const selected = reasons.find((reason) => String(reason.cancelCodeId) === cancellationCode);
       const reason = reasonInput?.value.trim() || selected?.description || 'Cancelado pelo lojista';
       return { cancellationCode, reason };
     },

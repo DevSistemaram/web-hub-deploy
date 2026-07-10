@@ -166,7 +166,7 @@ export interface FoodOrder {
 }
 
 export interface FoodCancellationReason {
-  cancelCodeId: string;
+  cancelCodeId: number;
   description: string;
 }
 
