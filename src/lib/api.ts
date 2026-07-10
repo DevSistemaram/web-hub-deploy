@@ -119,6 +119,11 @@ export type FoodOrderAction =
   | 'dispatch'
   | 'requestCancellation';
 
+export interface FoodOrderActionParams {
+  reason?: string;
+  cancellationCode?: string;
+}
+
 export interface FoodOrderItem {
   sku: string | null;
   title: string;
@@ -397,10 +402,10 @@ export const api = {
       return request<FoodOrder[]>(`/food/orders${suffix}`);
     },
     getOrder: (id: string) => request<FoodOrder>(`/food/orders/${id}`),
-    updateOrderStatus: (id: string, action: FoodOrderAction, reason?: string) =>
+    updateOrderStatus: (id: string, action: FoodOrderAction, params?: FoodOrderActionParams) =>
       request<{ success: boolean; status: FoodOrderStatus }>(`/food/orders/${id}/status`, {
         method: 'POST',
-        body: JSON.stringify({ action, reason }),
+        body: JSON.stringify({ action, ...params }),
       }),
   },
   vendas: {

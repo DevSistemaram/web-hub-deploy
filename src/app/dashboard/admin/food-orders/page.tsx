@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Swal from 'sweetalert2';
 import { ArrowLeft, RefreshCw, UtensilsCrossed } from 'lucide-react';
-import { api, Integration, FoodOrder, FoodOrderStatus, FoodOrderAction } from '@/lib/api';
+import { api, Integration, FoodOrder, FoodOrderStatus, FoodOrderAction, FoodOrderActionParams } from '@/lib/api';
 import { isAdmin } from '@/lib/auth';
 import { toastError, toastSuccess } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,17 @@ const FOOD_TRANSITIONS: Record<FoodOrderStatus, FoodOrderAction[]> = {
   CANCELLED: [],
 };
 
+const FOOD_CANCELLATION_REASONS = [
+  { code: '501', label: 'Item indisponível' },
+  { code: '502', label: 'Restaurante fechado' },
+  { code: '503', label: 'Cardápio desatualizado' },
+  { code: '504', label: 'Pedido fora da área de entrega' },
+  { code: '505', label: 'Cliente solicitou o cancelamento' },
+  { code: '506', label: 'Problemas operacionais' },
+  { code: '507', label: 'Problemas sistêmicos' },
+  { code: '508', label: 'Outro motivo' },
+] as const;
+
 function statusVariant(status: FoodOrderStatus): 'success' | 'warning' | 'destructive' | 'outline' {
   if (status === 'CONCLUDED') return 'success';
   if (status === 'CANCELLED') return 'destructive';
@@ -50,6 +62,51 @@ function statusVariant(status: FoodOrderStatus): 'success' | 'warning' | 'destru
 
 function money(v: number, currency = 'BRL') {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(v ?? 0);
+}
+
+async function requestCancellationParams(order: FoodOrder): Promise<FoodOrderActionParams | null> {
+  const options = FOOD_CANCELLATION_REASONS.map(
+    (reason) => `<option value="${reason.code}">${reason.code} - ${reason.label}</option>`,
+  ).join('');
+
+  const result = await Swal.fire<FoodOrderActionParams>({
+    title: `Cancelar pedido #${order.displayId || order.platformOrderId}`,
+    html: `
+      <div style="text-align:left">
+        <label for="food-cancellation-code" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600">
+          Motivo
+        </label>
+        <select id="food-cancellation-code" class="swal2-input" style="width:100%;margin:0 0 14px 0">
+          <option value="">Selecione um motivo</option>
+          ${options}
+        </select>
+        <label for="food-cancellation-reason" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600">
+          Observação
+        </label>
+        <textarea id="food-cancellation-reason" class="swal2-textarea" maxlength="255" style="width:100%;margin:0;min-height:96px"></textarea>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Cancelar pedido',
+    cancelButtonText: 'Voltar',
+    confirmButtonColor: '#ef4444',
+    reverseButtons: true,
+    focusConfirm: false,
+    preConfirm: () => {
+      const codeInput = document.getElementById('food-cancellation-code') as HTMLSelectElement | null;
+      const reasonInput = document.getElementById('food-cancellation-reason') as HTMLTextAreaElement | null;
+      const cancellationCode = codeInput?.value.trim() ?? '';
+      if (!cancellationCode) {
+        Swal.showValidationMessage('Selecione o motivo do cancelamento');
+        return false;
+      }
+      const selected = FOOD_CANCELLATION_REASONS.find((reason) => reason.code === cancellationCode);
+      const reason = reasonInput?.value.trim() || selected?.label || 'Cancelado pelo lojista';
+      return { cancellationCode, reason };
+    },
+  });
+
+  return result.isConfirmed ? result.value ?? null : null;
 }
 
 export default function FoodOrdersTestPage() {
@@ -96,15 +153,15 @@ export default function FoodOrdersTestPage() {
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
   async function handleAction(order: FoodOrder, action: FoodOrderAction) {
-    let reason: string | undefined;
+    let params: FoodOrderActionParams | undefined;
     if (action === 'requestCancellation') {
-      const input = window.prompt('Motivo do cancelamento:') ?? '';
-      if (!input.trim()) return;
-      reason = input.trim();
+      const cancellationParams = await requestCancellationParams(order);
+      if (!cancellationParams) return;
+      params = cancellationParams;
     }
     setActingId(order.id);
     try {
-      const res = await api.food.updateOrderStatus(order.id, action, reason);
+      const res = await api.food.updateOrderStatus(order.id, action, params);
       toastSuccess(`Status atualizado: ${FOOD_STATUS_LABEL[res.status] ?? res.status}`);
       await loadOrders();
     } catch (err) {
