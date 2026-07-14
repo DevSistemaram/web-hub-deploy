@@ -170,6 +170,17 @@ export interface FoodCancellationReason {
   description: string;
 }
 
+export interface FoodItem {
+  itemId: string;
+  sku: string;
+  name: string;
+  description: string | null;
+  price: number;
+  status: string;
+  categoryId: string | null;
+  categoryName: string | null;
+}
+
 export interface ErpToken {
   id: string;
   label: string;
@@ -426,6 +437,18 @@ export const api = {
     // Consulta obrigatória (homologação) antes de requestCancellation.
     getCancellationReasons: (id: string) =>
       request<FoodCancellationReason[]>(`/food/orders/${id}/cancellation-reasons`),
+    listItems: (platform: FoodPlatform, integrationId: string) =>
+      request<FoodItem[]>(`/food/${platform}/catalog/items?integrationId=${integrationId}`),
+    updateItemPrice: (platform: FoodPlatform, integrationId: string, itemId: string, price: number) =>
+      request(`/food/${platform}/catalog/items/price`, {
+        method: 'PATCH',
+        body: JSON.stringify({ integrationId, payload: { itemId, price: { value: price } } }),
+      }),
+    updateItemStatus: (platform: FoodPlatform, integrationId: string, itemId: string, status: 'AVAILABLE' | 'UNAVAILABLE') =>
+      request(`/food/${platform}/catalog/items/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ integrationId, payload: { itemId, status } }),
+      }),
   },
   vendas: {
     exportExcel: (params: ExportVendasParams) => {
