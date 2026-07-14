@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
-import { ArrowLeft, RefreshCw, UtensilsCrossed } from 'lucide-react';
+import { ArrowLeft, Clock, RefreshCw, UtensilsCrossed } from 'lucide-react';
 import {
   api,
   Integration,
@@ -49,6 +49,31 @@ const FOOD_TRANSITIONS: Record<FoodOrderStatus, FoodOrderAction[]> = {
   CONCLUDED: [],
   CANCELLED: [],
 };
+
+// Espelha food-status.ts: UaiRango diverge por orderType em ambas as direções —
+// retirada não tem ação "dispatch" (Merchant API não expõe isso pra pickup; READY é terminal
+// pras ações manuais, CONCLUDED só via evento) e entrega não tem "readyToPickup" (UaiRango
+// DELIVERY não passa por READY — vai direto de Em preparo pra Saiu pra entrega).
+const PICKUP_ORDER_TYPES = new Set(['TAKEOUT', 'RETIRAR']);
+function isPickup(orderType?: string): boolean {
+  return !!orderType && PICKUP_ORDER_TYPES.has(orderType.toUpperCase());
+}
+
+function actionsFor(order: FoodOrder): FoodOrderAction[] {
+  const base = FOOD_TRANSITIONS[order.status] ?? [];
+  if (order.platform !== 'uairango') return base;
+  return isPickup(order.orderType)
+    ? base.filter((a) => a !== 'dispatch')
+    : base.filter((a) => a !== 'readyToPickup');
+}
+
+// Sem ação manual mas o pedido ainda não fechou de verdade — CONCLUDED só chega via
+// evento/poll da plataforma (DISPATCHED na entrega, READY na retirada UaiRango).
+function isWaitingOnPlatform(order: FoodOrder): boolean {
+  if (order.status === 'DISPATCHED') return true;
+  if (order.status === 'READY' && order.platform === 'uairango' && isPickup(order.orderType)) return true;
+  return false;
+}
 
 function statusVariant(status: FoodOrderStatus): 'success' | 'warning' | 'destructive' | 'outline' {
   if (status === 'CONCLUDED') return 'success';
@@ -247,7 +272,7 @@ export default function FoodOrdersTestPage() {
           ) : (
             <div className="space-y-3">
               {orders.map((order) => {
-                const actions = FOOD_TRANSITIONS[order.status] ?? [];
+                const actions = actionsFor(order);
                 const isActing = actingId === order.id;
                 return (
                   <Card key={order.id}>
@@ -297,7 +322,14 @@ export default function FoodOrdersTestPage() {
 
                       <div className="flex flex-wrap gap-2 pt-1">
                         {actions.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">Sem ações disponíveis (estado final).</span>
+                          isWaitingOnPlatform(order) ? (
+                            <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
+                              <Clock className="w-3.5 h-3.5" />
+                              Aguardando confirmação da plataforma pra concluir (sem ação manual).
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Sem ações disponíveis (estado final).</span>
+                          )
                         ) : (
                           actions.map((action) => (
                             <Button
