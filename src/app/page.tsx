@@ -283,20 +283,6 @@ function Pricing() {
           </p>
         </div>
 
-        {/* <div className="mx-auto mt-10 flex max-w-3xl items-start gap-4 rounded-lg border border-primary/30 bg-primary/5 p-5 sm:items-center">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Check className="h-5 w-5 text-primary" />
-          </span>
-          <div className="text-left">
-            <p className="font-semibold text-foreground">
-              Taxa de Implantação: <span className="text-primary">R$ 0,00</span> — Isento
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Como incentivo à nossa parceria, absorvemos 100% dos custos iniciais de setup.
-            </p>
-          </div>
-        </div> */}
-
         <div className="mt-10 grid gap-6 sm:grid-cols-3">
           {PLANS.map(({ name, price, period, description, highlight }) => (
             <Card
