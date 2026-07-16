@@ -142,7 +142,7 @@ function Hero() {
         </div>
         <div className="mt-12 flex flex-col items-center gap-1.5">
           <p className="text-xs text-muted-foreground/60">Veja as integrações disponíveis</p>
-          <ChevronDown className="h-5 w-5 animate-bounce text-muted-foreground/40" />
+          <ChevronDown aria-hidden="true" className="h-5 w-5 animate-bounce text-muted-foreground/40" />
         </div>
       </div>
     </section>
@@ -151,7 +151,7 @@ function Hero() {
 
 function Connections() {
   return (
-    <section id="conexoes" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+    <section id="conexoes" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-bold text-foreground">
           Conecte-se aos maiores canais de venda do Brasil
@@ -273,7 +273,7 @@ const PLANS = [
 
 function Pricing() {
   return (
-    <section id="precos" className="border-t">
+    <section id="precos" className="scroll-mt-20 border-t">
       <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold text-foreground">
