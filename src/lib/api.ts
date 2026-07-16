@@ -28,7 +28,7 @@ async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<R
     },
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && token) {
     redirectToLogin();
     throw new Error('Sessão expirada. Faça login novamente.');
   }
@@ -174,11 +174,13 @@ export interface FoodItem {
   itemId: string;
   sku: string;
   name: string;
+  priceName: string | null;
   description: string | null;
   price: number;
   status: string;
   categoryId: string | null;
   categoryName: string | null;
+  categoryStatus: string | null;
 }
 
 export interface ErpToken {
@@ -308,16 +310,37 @@ export const api = {
       request<{ valid: boolean; reason?: string; email?: string | null }>(
         `/auth/invite/${encodeURIComponent(token)}`,
       ),
-    register: (data: { name: string; email: string; password: string; inviteToken: string }) =>
-      request<{ token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }>(
-        '/auth/register',
-        { method: 'POST', body: JSON.stringify(data) },
-      ),
+    register: (data: { name: string; email: string; password: string; inviteToken?: string }) =>
+      request<
+        | { token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }
+        | { message: string }
+      >('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
     login: (data: { email: string; password: string }) =>
       request<{ token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }>(
         '/auth/login',
         { method: 'POST', body: JSON.stringify(data) },
       ),
+    forgotPassword: (email: string) =>
+      request<{ message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    resendVerification: (email: string) =>
+      request<{ message: string }>('/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    validateResetToken: (token: string) =>
+      request<{ valid: boolean; reason?: string }>(
+        `/auth/reset-password/${encodeURIComponent(token)}`,
+      ),
+    resetPassword: (token: string, newPassword: string) =>
+      request<{ message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, newPassword }),
+      }),
+    verifyEmail: (token: string) =>
+      request<{ message: string }>(`/auth/verify-email/${encodeURIComponent(token)}`),
   },
   admin: {
     createInvitation: (data: { email?: string; expiresInDays?: number }) =>
@@ -448,6 +471,11 @@ export const api = {
       request(`/food/${platform}/catalog/items/status`, {
         method: 'PUT',
         body: JSON.stringify({ integrationId, payload: { itemId, status } }),
+      }),
+    updateCategoryStatus: (platform: FoodPlatform, integrationId: string, categoryId: string, status: 'AVAILABLE' | 'UNAVAILABLE') =>
+      request(`/food/${platform}/catalog/categories/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ integrationId, payload: { categoryId, status } }),
       }),
   },
   vendas: {
