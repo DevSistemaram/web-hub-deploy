@@ -15,6 +15,7 @@ import {
 import { FaInstagram, FaYoutube } from 'react-icons/fa6';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { IconCard } from '@/components/ui/icon-card';
 
 export const dynamic = 'force-static';
 
@@ -162,19 +163,13 @@ function Connections() {
       </div>
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {CONNECTIONS.map(({ image, name, description, tagline }) => (
-          <Card key={name} className="transition hover:border-primary/40 hover:shadow-md">
-            <CardContent className="pt-6">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <Image src={image} alt={name} width={24} height={24} className="h-6 w-6 object-contain" />
-              </span>
-              <h3 className="mt-4 text-lg font-semibold text-foreground">{name}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
-              <p className="mt-4 flex items-center gap-2 text-xs font-medium text-primary">
-                <Check className="h-3.5 w-3.5" />
-                {tagline}
-              </p>
-            </CardContent>
-          </Card>
+          <IconCard
+            key={name}
+            image={{ src: image, alt: name }}
+            title={name}
+            description={description}
+            tag={{ label: tagline, icon: Check }}
+          />
         ))}
       </div>
     </section>
@@ -192,20 +187,14 @@ function Features() {
           </p>
         </div>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map(({ icon: Icon, title, tag, description }) => (
-            <Card key={title} className="transition hover:border-primary/40 hover:shadow-md">
-              <CardContent className="pt-6">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Icon className="h-6 w-6 text-primary" />
-                </span>
-                <h3 className="mt-4 text-lg font-semibold text-foreground">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
-                <p className="mt-4 flex items-center gap-2 text-xs font-medium text-primary">
-                  <Zap className="h-3.5 w-3.5" />
-                  {tag}
-                </p>
-              </CardContent>
-            </Card>
+          {FEATURES.map(({ icon, title, tag, description }) => (
+            <IconCard
+              key={title}
+              icon={icon}
+              title={title}
+              description={description}
+              tag={{ label: tag, icon: Zap }}
+            />
           ))}
         </div>
       </div>
