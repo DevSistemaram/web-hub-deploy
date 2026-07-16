@@ -19,8 +19,6 @@ import { IconCard } from '@/components/ui/icon-card';
 
 export const dynamic = 'force-static';
 
-const MARKETPLACES = ['Mercado Livre', 'Shopee', 'Ideris', 'Nuvemshop'];
-
 const CONNECTIONS = [
   {
     image: '/mercado_livre.svg',
@@ -47,6 +45,8 @@ const CONNECTIONS = [
     tagline: 'Sua loja, seu domínio',
   },
 ];
+
+const MARKETPLACES = CONNECTIONS.map((c) => c.name);
 
 const FEATURES = [
   {
