@@ -220,7 +220,7 @@ function Features() {
 
 function HowItWorks() {
   return (
-    <section className="border-t bg-secondary/50">
+    <section className="border-t">
       <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold text-foreground">Como funciona</h2>
