@@ -25,13 +25,13 @@ const CONNECTIONS = [
     image: '/mercado_livre.svg',
     name: 'Mercado Livre',
     description: 'O maior marketplace da América Latina, direto no seu ERP.',
-    tagline: 'Conexão oficial',
+    tagline: 'Maior alcance do Brasil',
   },
   {
     image: '/shopee.svg',
     name: 'Shopee',
     description: 'Milhões de compradores todos os dias, pedidos sincronizados.',
-    tagline: 'Conexão oficial',
+    tagline: 'Sincronização automática',
   },
   {
     image: '/ideris.svg',
@@ -43,7 +43,7 @@ const CONNECTIONS = [
     image: '/nuvemshop.svg',
     name: 'Nuvemshop',
     description: 'Sua loja própria integrada ao mesmo fluxo de pedidos.',
-    tagline: 'Conexão oficial',
+    tagline: 'Sua loja, seu domínio',
   },
 ];
 
