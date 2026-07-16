@@ -139,11 +139,11 @@ function Hero() {
           Ciclo completo ERP ↔ Marketplace
         </div>
         <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Seu ERP conectado aos maiores marketplaces do Brasil
+          Chega de copiar pedido de marketplace pro ERP na mão
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-          Importe pedidos, sincronize estoque, ajuste preços e envie NF-e tudo em um único hub
-          conectado ao seu ERP.
+          Mercado Livre, Shopee, Nuvemshop e Ideris conectados ao seu ERP: pedidos, estoque,
+          preços e NF-e sincronizados automaticamente, sem digitar nada duas vezes.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Button size="lg" asChild className="w-full sm:w-auto">
@@ -156,6 +156,9 @@ function Hero() {
             <Link href="/login">Entrar</Link>
           </Button>
         </div>
+        <p className="mt-4 text-xs text-muted-foreground/70">
+          Cadastro gratuito, sem cartão de crédito. Leva menos de um minuto.
+        </p>
         <div className="mt-12 flex flex-col items-center gap-1.5">
           <p className="text-xs text-muted-foreground/60">Veja as integrações disponíveis</p>
           <ChevronDown aria-hidden="true" className="h-5 w-5 animate-bounce text-muted-foreground/40" />
@@ -170,11 +173,11 @@ function Connections() {
     <section id="conexoes" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-bold text-foreground">
-          Conecte-se aos maiores canais de venda do Brasil
+          Seus canais de venda, todos no mesmo lugar
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Uma conexão dedicada para cada marketplace autorize uma vez e receba todos os pedidos
-          no mesmo fluxo.
+          Autorize uma vez, receba pedido de todo canal no seu ERP sem acessar painel de
+          marketplace nenhum pra conferir venda.
         </p>
       </div>
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -197,7 +200,7 @@ function Features() {
     <section className="border-t bg-secondary/50">
       <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold text-foreground">O ciclo completo, no seu ERP</h2>
+          <h2 className="text-3xl font-bold text-foreground">Menos trabalho manual, mais tempo pra vender</h2>
           <p className="mt-3 text-muted-foreground">
             Do pedido recebido à nota enviada sem planilha, sem cópia manual, sem retrabalho.
           </p>
@@ -319,7 +322,7 @@ function Pricing() {
                 >
                   <a href={whatsappPlanLink(name)} target="_blank" rel="noopener noreferrer">
                     <MessageCircle className="mr-2 h-4 w-4" />
-                    Falar com o suporte
+                    Quero esse plano
                   </a>
                 </Button>
               </CardContent>
