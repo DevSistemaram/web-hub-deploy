@@ -2,7 +2,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   ArrowRight,
-  Camera,
   Check,
   ChevronDown,
   FileCheck,
@@ -10,10 +9,10 @@ import {
   MessageCircle,
   PackageCheck,
   RefreshCw,
-  SquarePlay,
   Tag,
   Zap,
 } from 'lucide-react';
+import { FaInstagram, FaYoutube } from 'react-icons/fa6';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -359,12 +358,12 @@ const FOOTER_CONTACTS = [
     href: `https://api.whatsapp.com/send?phone=${WHATSAPP_PHONE}`,
   },
   {
-    icon: Camera,
+    icon: FaInstagram,
     label: 'Instagram',
     href: 'https://www.instagram.com/sistemaram',
   },
   {
-    icon: SquarePlay,
+    icon: FaYoutube,
     label: 'YouTube',
     href: 'https://www.youtube.com/@SistemaRAM',
   },
