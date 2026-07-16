@@ -94,6 +94,11 @@ const STEPS = [
   },
 ];
 
+const NAV_LINKS = [
+  { label: 'Integrações', href: '/#conexoes' },
+  { label: 'Preços', href: '/#precos' },
+];
+
 function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur">
@@ -101,14 +106,25 @@ function Navbar() {
         <Link href="/">
           <Image src="/RAMHub.svg" alt="Hub RAM" width={120} height={36} className="h-8 w-auto" />
         </Link>
-        <nav className="flex items-center gap-2">
+        <nav className="hidden items-center gap-6 md:flex">
+          {NAV_LINKS.map(({ label, href }) => (
+            <Link
+              key={href}
+              href={href}
+              className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+        <div className="flex items-center gap-2">
           <Button variant="ghost" asChild className="hidden sm:inline-flex">
             <Link href="/login">Entrar</Link>
           </Button>
           <Button asChild>
             <Link href="/register">Criar conta grátis</Link>
           </Button>
-        </nav>
+        </div>
       </div>
     </header>
   );
