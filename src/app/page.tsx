@@ -379,6 +379,9 @@ function Footer() {
               <li key={label}>
                 <Link
                   href={href}
+                  {...(href.startsWith('http')
+                    ? { target: '_blank', rel: 'noopener noreferrer' }
+                    : {})}
                   className="text-sm text-muted-foreground transition hover:text-foreground"
                 >
                   {label}
