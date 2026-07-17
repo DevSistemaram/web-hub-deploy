@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
+  Clock,
   FileCheck,
   Mail,
   MessageCircle,
@@ -16,10 +17,25 @@ import { FaInstagram, FaYoutube } from 'react-icons/fa6';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { IconCard } from '@/components/ui/icon-card';
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion';
+import type { LucideIcon } from 'lucide-react';
 
 export const dynamic = 'force-static';
 
-const CONNECTIONS = [
+type Connection = {
+  image: string;
+  name: string;
+  description: string;
+  tagline: string;
+  tagIcon?: LucideIcon;
+};
+
+const CONNECTIONS: Connection[] = [
   {
     image: '/mercado_livre.svg',
     name: 'Mercado Livre',
@@ -33,6 +49,12 @@ const CONNECTIONS = [
     tagline: 'Sincronização automática',
   },
   {
+    image: '/amazon.svg',
+    name: 'Amazon',
+    description: 'Um dos maiores marketplaces do mundo, pedidos direto no seu ERP.',
+    tagline: 'Alcance internacional',
+  },
+  {
     image: '/ideris.svg',
     name: 'Ideris',
     description: 'Hub que multiplica seus canais de venda em um só lugar.',
@@ -43,6 +65,25 @@ const CONNECTIONS = [
     name: 'Nuvemshop',
     description: 'Sua loja própria integrada ao mesmo fluxo de pedidos.',
     tagline: 'Sua loja, seu domínio',
+  },
+  {
+    image: '/ifood.svg',
+    name: 'iFood',
+    description: 'Pedidos de delivery sincronizados com o mesmo fluxo do seu ERP.',
+    tagline: 'Delivery integrado',
+  },
+  {
+    image: '/uairango.svg',
+    name: 'UaiRango',
+    description: 'Canal de delivery regional conectado ao seu ERP.',
+    tagline: 'Delivery integrado',
+  },
+  {
+    image: '/ze_delivery.svg',
+    name: 'Zé Delivery',
+    description: 'Em breve: mais um canal de delivery no seu Hub RAM.',
+    tagline: 'Em breve',
+    tagIcon: Clock,
   },
 ];
 
@@ -142,8 +183,9 @@ function Hero() {
           Chega de copiar pedido de marketplace pro ERP na mão
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-          Mercado Livre, Shopee, Nuvemshop e Ideris conectados ao seu ERP: pedidos, estoque,
-          preços e NF-e sincronizados automaticamente, sem digitar nada duas vezes.
+          8 canais de venda — Mercado Livre, Shopee, Amazon, iFood e mais — conectados ao seu
+          ERP: pedidos, estoque, preços e NF-e sincronizados automaticamente, sem digitar nada
+          duas vezes.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Button size="lg" asChild className="w-full sm:w-auto">
@@ -181,13 +223,13 @@ function Connections() {
         </p>
       </div>
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {CONNECTIONS.map(({ image, name, description, tagline }) => (
+        {CONNECTIONS.map(({ image, name, description, tagline, tagIcon }) => (
           <IconCard
             key={name}
             image={{ src: image, alt: name }}
             title={name}
             description={description}
-            tag={{ label: tagline, icon: Check }}
+            tag={{ label: tagline, icon: tagIcon ?? Check }}
           />
         ))}
       </div>
@@ -334,6 +376,68 @@ function Pricing() {
   );
 }
 
+const FAQ_ITEMS = [
+  {
+    question: 'O que é o Hub RAM?',
+    answer:
+      'Integração nativa do ERP Sistema RAM com marketplaces e plataformas de venda. Pedidos, estoque, preços e NF-e sincronizados automaticamente, sem digitação manual.',
+  },
+  {
+    question: 'Preciso ter o ERP Sistema RAM pra usar o Hub RAM?',
+    answer:
+      'Sim. O Hub RAM é a integração nativa do Sistema RAM — não é um conector genérico pra qualquer ERP.',
+  },
+  {
+    question: 'Quais marketplaces e plataformas o Hub RAM integra?',
+    answer:
+      'Mercado Livre, Shopee, Amazon, Nuvemshop, Ideris, iFood e UaiRango, com Zé Delivery chegando em breve.',
+  },
+  {
+    question: 'O cadastro é gratuito?',
+    answer: 'Sim. Cadastro gratuito, sem cartão de crédito, em menos de um minuto.',
+  },
+  {
+    question: 'Como funciona o preço do Hub RAM?',
+    answer:
+      'O valor é escalonado pelo volume de pedidos processados por mês, somando todos os canais conectados. Veja os planos na seção de preços.',
+  },
+  {
+    question: 'O estoque fica sincronizado entre os canais?',
+    answer:
+      'Sim. A baixa de estoque é sincronizada com o ERP automaticamente ao confirmar a venda, em qualquer canal conectado.',
+  },
+  {
+    question: 'Consigo emitir nota fiscal pelos marketplaces conectados?',
+    answer:
+      'Sim. O retorno de NF-e é enviado ao marketplace direto pelo Hub RAM, mantendo o ciclo de venda completo.',
+  },
+];
+
+function FAQ() {
+  return (
+    <section className="scroll-mt-20 border-t bg-secondary/50">
+      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold text-foreground">Perguntas frequentes</h2>
+          <p className="mt-3 text-muted-foreground">
+            Tudo que você precisa saber antes de conectar seus canais de venda.
+          </p>
+        </div>
+        <Accordion type="single" collapsible className="mx-auto mt-12 max-w-3xl">
+          {FAQ_ITEMS.map(({ question, answer }) => (
+            <AccordionItem key={question} value={question}>
+              <AccordionTrigger className="text-left text-foreground">
+                {question}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">{answer}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+    </section>
+  );
+}
+
 const FOOTER_PRODUCT_LINKS = [
   { label: 'Entrar', href: '/login' },
   { label: 'Criar conta', href: '/register' },
@@ -451,6 +555,7 @@ export default function HomePage() {
       <Features />
       <HowItWorks />
       <Pricing />
+      <FAQ />
       <Footer />
     </main>
   );
