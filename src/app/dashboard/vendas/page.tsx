@@ -43,7 +43,7 @@ export default function VendasPage() {
     setError('');
     setLoading(true);
     try {
-      const blob = await api.vendas.exportExcel({
+      const { blob, truncated, failedIntegrations } = await api.vendas.exportExcel({
         startDate,
         endDate,
         status: (status || undefined) as ExportVendasParams['status'],
@@ -51,6 +51,14 @@ export default function VendasPage() {
       });
       downloadBlob(blob, `vendas_${startDate}_${endDate}.xlsx`);
       toastSuccess('Planilha exportada com sucesso!');
+
+      if (failedIntegrations.length > 0) {
+        const names = failedIntegrations.map((f) => f.nickname ?? f.marketplace).join(', ');
+        toastError(`Alguns pedidos podem estar faltando — falha ao buscar: ${names}. Tente novamente em alguns minutos.`);
+      }
+      if (truncated) {
+        toastError('Limite de linhas atingido — reduza o período para exportar tudo.');
+      }
     } catch (err) {
       toastError(err instanceof Error ? err.message : 'Erro ao exportar vendas.');
     } finally {

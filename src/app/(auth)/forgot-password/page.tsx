@@ -1,8 +1,7 @@
 import { Suspense } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { Check } from 'lucide-react';
-import { RegisterForm } from '@/components/auth/RegisterForm';
+import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
 import { Card, CardContent } from '@/components/ui/card';
 
 const FEATURES = [
@@ -53,7 +52,7 @@ function BrandPanel() {
   );
 }
 
-export default function RegisterPage() {
+export default function ForgotPasswordPage() {
   return (
     <main className="min-h-screen grid lg:grid-cols-2">
       <BrandPanel />
@@ -64,14 +63,14 @@ export default function RegisterPage() {
             <div className="flex justify-center mb-4 lg:hidden">
               <Image src="/RAMHub.svg" alt="Hub RAM" width={160} height={46} className="h-12 w-auto" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Criar conta no Hub RAM</h1>
-            <p className="text-muted-foreground text-sm mt-1">Crie sua conta gratuitamente</p>
+            <h1 className="text-2xl font-bold text-foreground">Recuperar senha</h1>
+            <p className="text-muted-foreground text-sm mt-1">Enviaremos um link para redefinir sua senha</p>
           </div>
 
           <Card>
             <CardContent className="pt-6">
-              <Suspense fallback={<div className="h-40" />}>
-                <RegisterForm />
+              <Suspense fallback={null}>
+                <ForgotPasswordForm />
               </Suspense>
             </CardContent>
           </Card>

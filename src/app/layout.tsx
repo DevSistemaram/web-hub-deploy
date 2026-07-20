@@ -1,5 +1,12 @@
 import type { Metadata, Viewport } from 'next';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://hub.ramnuvem.com';
 
@@ -38,14 +45,6 @@ export const metadata: Metadata = {
   creator: 'Sistema RAM',
   publisher: 'Sistema RAM',
   category: 'business',
-
-  robots: {
-    index: false,
-    follow: false,
-    noarchive: true,
-    nosnippet: true,
-    googleBot: { index: false, follow: false },
-  },
 
   openGraph: {
     type: 'website',
@@ -88,11 +87,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning className={plusJakarta.variable}>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('theme'),d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||(t===null&&d))document.documentElement.classList.add('dark');})()`,
+            __html: `(function(){if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark');})()`,
           }}
         />
       </head>

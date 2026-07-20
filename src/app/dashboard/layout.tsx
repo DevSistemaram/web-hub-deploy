@@ -7,7 +7,7 @@ import Image from 'next/image';
 import {
   LayoutDashboard, Link2, KeyRound, FileText, LogOut, ShieldCheck,
   UserX, ClipboardList, SlidersHorizontal, Moon, Sun, Menu, X, Webhook,
-  FileSpreadsheet,
+  FileSpreadsheet, UtensilsCrossed, Package,
 } from 'lucide-react';
 import { isAuthenticated, getUser, clearToken, isAdmin, isImpersonating, stopImpersonation } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,8 @@ const adminNavItems = [
   { href: '/dashboard/admin', label: 'Admin', icon: ShieldCheck, exact: true },
   { href: '/dashboard/admin/audit-logs', label: 'Audit Log', icon: ClipboardList, exact: false },
   { href: '/dashboard/admin/marketplace-configs', label: 'Config. APIs', icon: SlidersHorizontal, exact: false },
+  { href: '/dashboard/admin/food-orders', label: 'Pedidos Food', icon: UtensilsCrossed, exact: false },
+  { href: '/dashboard/admin/food-items', label: 'Itens Food', icon: Package, exact: false },
   { href: '/dashboard/webhook-tester', label: 'Teste Webhook', icon: Webhook, exact: false },
 ];
 

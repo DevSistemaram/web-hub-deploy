@@ -13,23 +13,22 @@ import { Label } from '@/components/ui/label';
 type InviteState =
   | { status: 'loading' }
   | { status: 'invalid'; reason: string }
-  | { status: 'valid'; email: string | null };
+  | { status: 'valid'; email: string | null }
+  | { status: 'public' };
 
 export function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get('token') ?? '';
 
-  const [invite, setInvite] = useState<InviteState>({ status: 'loading' });
+  const [invite, setInvite] = useState<InviteState>(inviteToken ? { status: 'loading' } : { status: 'public' });
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verifyEmailSent, setVerifyEmailSent] = useState(false);
 
   useEffect(() => {
-    if (!inviteToken) {
-      setInvite({ status: 'invalid', reason: 'Link de convite ausente.' });
-      return;
-    }
+    if (!inviteToken) return;
 
     api.auth.validateInvite(inviteToken).then((res) => {
       if (res.valid) {
@@ -48,9 +47,15 @@ export function RegisterForm() {
     setError('');
     setLoading(true);
     try {
-      const result = await api.auth.register({ ...form, inviteToken });
-      saveToken(result.token, result.user);
-      router.push('/dashboard');
+      const result = await api.auth.register(
+        invite.status === 'valid' ? { ...form, inviteToken } : form,
+      );
+      if ('token' in result) {
+        saveToken(result.token, result.user);
+        router.push('/dashboard');
+      } else {
+        setVerifyEmailSent(true);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta');
     } finally {
@@ -84,6 +89,23 @@ export function RegisterForm() {
     );
   }
 
+  if (verifyEmailSent) {
+    return (
+      <div className="text-center space-y-3 py-4">
+        <p className="text-g font-medium">Conta criada com sucesso!</p>
+        <p className="text-sm text-muted-foreground">
+          Enviamos um link de confirmação para <strong>{form.email}</strong>. Verifique sua caixa de entrada para
+          ativar o acesso.
+        </p>
+        <p className="text-center text-sm text-muted-foreground">
+          <Link href="/login" className="text-primary hover:underline font-medium">
+            Voltar para o login
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
@@ -111,10 +133,10 @@ export function RegisterForm() {
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
           placeholder="seu@email.com"
-          readOnly={!!invite.email}
-          className={invite.email ? 'bg-muted cursor-not-allowed' : ''}
+          readOnly={invite.status === 'valid' && !!invite.email}
+          className={invite.status === 'valid' && invite.email ? 'bg-muted cursor-not-allowed' : ''}
         />
-        {invite.email && (
+        {invite.status === 'valid' && invite.email && (
           <p className="text-xs text-muted-foreground">Este convite foi emitido para este e-mail.</p>
         )}
       </div>

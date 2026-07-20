@@ -16,6 +16,10 @@ export function LoginForm() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
+
+  const UNVERIFIED_EMAIL_ERROR = 'Confirme seu e-mail antes de entrar';
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -26,6 +30,7 @@ export function LoginForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setResendSent(false);
     setLoading(true);
     try {
       const result = await api.auth.login(form);
@@ -38,11 +43,40 @@ export function LoginForm() {
     }
   }
 
+  async function handleResendVerification() {
+    setResending(true);
+    try {
+      await api.auth.resendVerification(form.email);
+      setResendSent(true);
+    } catch {
+      setResendSent(true);
+    } finally {
+      setResending(false);
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3">
-          {error}
+        <div className="rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 space-y-2">
+          <p>{error}</p>
+          {error === UNVERIFIED_EMAIL_ERROR && (
+            resendSent ? (
+              <p className="text-muted-foreground">
+                Se o e-mail existir e ainda não estiver verificado, enviamos um novo link.
+              </p>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={resending}
+                onClick={handleResendVerification}
+              >
+                {resending ? 'Reenviando...' : 'Reenviar email de verificação'}
+              </Button>
+            )
+          )}
         </div>
       )}
       <div className="space-y-1.5">
@@ -70,6 +104,11 @@ export function LoginForm() {
       <Button type="submit" disabled={loading} className="w-full">
         {loading ? 'Entrando...' : 'Entrar'}
       </Button>
+      <p className="text-center text-sm">
+        <Link href="/forgot-password" className="text-primary hover:underline font-medium">
+          Esqueci minha senha
+        </Link>
+      </p>
       <p className="text-center text-sm text-muted-foreground">
         Não tem conta?{' '}
         <Link href="/register" className="text-primary hover:underline font-medium">

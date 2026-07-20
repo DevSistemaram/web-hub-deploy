@@ -28,7 +28,7 @@ async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<R
     },
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && token) {
     redirectToLogin();
     throw new Error('Sessão expirada. Faça login novamente.');
   }
@@ -62,9 +62,37 @@ async function requestBlob(path: string, options: RequestInit = {}): Promise<Blo
   return response.blob();
 }
 
+export interface ExportMeta {
+  truncated: boolean;
+  failedIntegrations: { marketplace: string; nickname: string | null }[];
+}
+
+async function requestBlobWithMeta(path: string, options: RequestInit = {}): Promise<{ blob: Blob } & ExportMeta> {
+  const response = await fetchWithAuth(path, options);
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ message: 'Request failed' }));
+    throw new Error(err.message ?? 'Request failed');
+  }
+
+  const failedHeader = response.headers.get('X-Export-Failed-Integrations');
+  let failedIntegrations: ExportMeta['failedIntegrations'] = [];
+  if (failedHeader) {
+    try {
+      failedIntegrations = JSON.parse(decodeURIComponent(failedHeader));
+    } catch { /* malformed header — treat as no failures rather than break the download */ }
+  }
+
+  return {
+    blob: await response.blob(),
+    truncated: response.headers.get('X-Export-Truncated') === 'true',
+    failedIntegrations,
+  };
+}
+
 export interface Integration {
   id: string;
-  marketplace: 'mercadolivre' | 'shopee' | 'ideris' | 'nuvemshop' | 'ifood' | 'zedeliver' | 'uairango';
+  marketplace: 'mercadolivre' | 'shopee' | 'ideris' | 'nuvemshop' | 'ifood' | 'zedeliver' | 'uairango' | 'amazon';
   nickname: string | null;
   shopId: string | null;
   sellerId: string | null;
@@ -72,6 +100,87 @@ export interface Integration {
   createdAt: string;
   tokenExpiresAt: string | null;
   refreshTokenExpiresAt: string | null;
+}
+
+export type FoodPlatform = 'ifood' | 'uairango';
+
+export type FoodOrderStatus =
+  | 'PLACED'
+  | 'CONFIRMED'
+  | 'PREPARING'
+  | 'READY'
+  | 'DISPATCHED'
+  | 'CONCLUDED'
+  | 'CANCELLED';
+
+export type FoodOrderAction =
+  | 'confirm'
+  | 'readyToPickup'
+  | 'dispatch'
+  | 'requestCancellation';
+
+export interface FoodOrderActionParams {
+  reason?: string;
+  cancellationCode?: string;
+}
+
+export interface FoodOrderItem {
+  sku: string | null;
+  title: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  observations?: string | null;
+}
+
+export interface FoodOrder {
+  id: string;
+  integrationId: string;
+  platformOrderId: string;
+  displayId: string;
+  platform: FoodPlatform;
+  status: FoodOrderStatus;
+  rawStatus: string;
+  orderType: string;
+  createdAt: string;
+  customer: { name: string; phone: string | null; document: string | null };
+  items: FoodOrderItem[];
+  financial: { subtotal: number; deliveryFee: number; discount: number; total: number; currency: string };
+  address: {
+    street: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  } | null;
+  paymentMethod: string | null;
+  merchantId: string | null;
+  merchantName: string | null;
+  requiresDeliveryCode?: boolean;
+  paymentType: string | null;
+  cardBrand: string | null;
+  prepaid: boolean;
+  changeFor: number | null;
+  discounts: Array<{ target: string; description: string; value: number }>;
+}
+
+export interface FoodCancellationReason {
+  cancelCodeId: number;
+  description: string;
+}
+
+export interface FoodItem {
+  itemId: string;
+  sku: string;
+  name: string;
+  priceName: string | null;
+  description: string | null;
+  price: number;
+  status: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  categoryStatus: string | null;
 }
 
 export interface ErpToken {
@@ -116,7 +225,7 @@ export interface AuditLog {
 
 export interface MarketplaceConfig {
   id: string;
-  marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop';
+  marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop' | 'amazon' | 'ifood' | 'uairango';
   redirectUri: string | null;
   env: string | null;
   isConfigured: boolean;
@@ -201,16 +310,37 @@ export const api = {
       request<{ valid: boolean; reason?: string; email?: string | null }>(
         `/auth/invite/${encodeURIComponent(token)}`,
       ),
-    register: (data: { name: string; email: string; password: string; inviteToken: string }) =>
-      request<{ token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }>(
-        '/auth/register',
-        { method: 'POST', body: JSON.stringify(data) },
-      ),
+    register: (data: { name: string; email: string; password: string; inviteToken?: string }) =>
+      request<
+        | { token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }
+        | { message: string }
+      >('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
     login: (data: { email: string; password: string }) =>
       request<{ token: string; user: { id: string; name: string; email: string; role: 'admin' | 'user' } }>(
         '/auth/login',
         { method: 'POST', body: JSON.stringify(data) },
       ),
+    forgotPassword: (email: string) =>
+      request<{ message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    resendVerification: (email: string) =>
+      request<{ message: string }>('/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    validateResetToken: (token: string) =>
+      request<{ valid: boolean; reason?: string }>(
+        `/auth/reset-password/${encodeURIComponent(token)}`,
+      ),
+    resetPassword: (token: string, newPassword: string) =>
+      request<{ message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, newPassword }),
+      }),
+    verifyEmail: (token: string) =>
+      request<{ message: string }>(`/auth/verify-email/${encodeURIComponent(token)}`),
   },
   admin: {
     createInvitation: (data: { email?: string; expiresInDays?: number }) =>
@@ -237,7 +367,7 @@ export const api = {
     },
     listMarketplaceConfigs: () =>
       request<MarketplaceConfig[]>('/admin/marketplace-configs'),
-    upsertMarketplaceConfig: (marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop', data: UpsertMarketplaceConfigPayload) =>
+    upsertMarketplaceConfig: (marketplace: 'shopee' | 'mercadolivre' | 'nuvemshop' | 'amazon' | 'ifood' | 'uairango', data: UpsertMarketplaceConfigPayload) =>
       request<{ success: boolean; marketplace: string; isConfigured: boolean }>(
         `/admin/marketplace-configs/${marketplace}`,
         { method: 'PATCH', body: JSON.stringify(data) },
@@ -272,6 +402,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ code, nickname }),
       }),
+    getAmazonAuthUrl: () => request<{ url: string }>('/integrations/amazon/auth-url'),
+    handleAmazonCallback: (code: string, sellingPartnerId: string, nickname?: string) =>
+      request('/integrations/amazon/callback', {
+        method: 'POST',
+        body: JSON.stringify({ spapi_oauth_code: code, selling_partner_id: sellingPartnerId, nickname }),
+      }),
     updateNickname: (id: string, nickname: string) =>
       request(`/integrations/${id}/nickname`, {
         method: 'PATCH',
@@ -281,20 +417,65 @@ export const api = {
       request(`/integrations/${id}`, { method: 'DELETE' }),
   },
   food: {
-    connectIfood: (clientId: string, clientSecret: string, nickname?: string) =>
-      request('/food/ifood/connect', {
+    // iFood app centralizado — onboarding da loja via userCode (2 passos).
+    startIfoodConnection: () =>
+      request<{ userCode: string; verificationUrlComplete: string; authorizationCodeVerifier: string; expiresIn: number }>(
+        '/food/ifood/connect/start',
+        { method: 'POST' },
+      ),
+    completeIfoodConnection: (authorizationCode: string, authorizationCodeVerifier: string, nickname?: string) =>
+      request('/food/ifood/connect/complete', {
         method: 'POST',
-        body: JSON.stringify({ clientId, clientSecret, nickname }),
+        body: JSON.stringify({ authorizationCode, authorizationCodeVerifier, nickname }),
       }),
     connectZeDeliver: (clientId: string, clientSecret: string, nickname?: string) =>
       request('/food/zedeliver/connect', {
         method: 'POST',
         body: JSON.stringify({ clientId, clientSecret, nickname }),
       }),
-    connectUairango: (clientId: string, clientSecret: string, nickname?: string) =>
-      request('/food/uairango/connect', {
+    // UaiRango app centralizado — onboarding da loja via userCode (2 passos).
+    startUairangoConnection: () =>
+      request<{ userCode: string; verificationUrlComplete: string; authorizationCodeVerifier: string; expiresIn: number }>(
+        '/food/uairango/connect/start',
+        { method: 'POST' },
+      ),
+    completeUairangoConnection: (authorizationCode: string, authorizationCodeVerifier: string, nickname?: string) =>
+      request('/food/uairango/connect/complete', {
         method: 'POST',
-        body: JSON.stringify({ clientId, clientSecret, nickname }),
+        body: JSON.stringify({ authorizationCode, authorizationCodeVerifier, nickname }),
+      }),
+    listOrders: (filters?: { platform?: FoodPlatform; status?: FoodOrderStatus }) => {
+      const qs = new URLSearchParams();
+      if (filters?.platform) qs.set('platform', filters.platform);
+      if (filters?.status) qs.set('status', filters.status);
+      const suffix = qs.toString() ? `?${qs.toString()}` : '';
+      return request<FoodOrder[]>(`/food/orders${suffix}`);
+    },
+    getOrder: (id: string) => request<FoodOrder>(`/food/orders/${id}`),
+    updateOrderStatus: (id: string, action: FoodOrderAction, params?: FoodOrderActionParams) =>
+      request<{ success: boolean; status: FoodOrderStatus }>(`/food/orders/${id}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ action, ...params }),
+      }),
+    // Consulta obrigatória (homologação) antes de requestCancellation.
+    getCancellationReasons: (id: string) =>
+      request<FoodCancellationReason[]>(`/food/orders/${id}/cancellation-reasons`),
+    listItems: (platform: FoodPlatform, integrationId: string) =>
+      request<FoodItem[]>(`/food/${platform}/catalog/items?integrationId=${integrationId}`),
+    updateItemPrice: (platform: FoodPlatform, integrationId: string, itemId: string, price: number) =>
+      request(`/food/${platform}/catalog/items/price`, {
+        method: 'PATCH',
+        body: JSON.stringify({ integrationId, payload: { itemId, price: { value: price } } }),
+      }),
+    updateItemStatus: (platform: FoodPlatform, integrationId: string, itemId: string, status: 'AVAILABLE' | 'UNAVAILABLE') =>
+      request(`/food/${platform}/catalog/items/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ integrationId, payload: { itemId, status } }),
+      }),
+    updateCategoryStatus: (platform: FoodPlatform, integrationId: string, categoryId: string, status: 'AVAILABLE' | 'UNAVAILABLE') =>
+      request(`/food/${platform}/catalog/categories/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ integrationId, payload: { categoryId, status } }),
       }),
   },
   vendas: {
@@ -304,7 +485,7 @@ export const api = {
       qs.set('end_date', params.endDate);
       if (params.status) qs.set('status', params.status);
       if (params.integrationId) qs.set('integrationId', params.integrationId);
-      return requestBlob(`/vendas/export/excel?${qs.toString()}`);
+      return requestBlobWithMeta(`/vendas/export/excel?${qs.toString()}`);
     },
   },
   settings: {

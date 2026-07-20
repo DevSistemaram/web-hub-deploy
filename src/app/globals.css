@@ -23,6 +23,8 @@
     --destructive-foreground: 0 0% 100%;
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
+    --accent-warm: 32 95% 52%;
+    --accent-warm-foreground: 0 0% 100%;
     --radius: 0.625rem;
   }
 
@@ -46,6 +48,8 @@
     --destructive-foreground: 0 0% 100%;
     --success: 142 69% 42%;
     --success-foreground: 0 0% 100%;
+    --accent-warm: 32 95% 58%;
+    --accent-warm-foreground: 222 47% 6%;
   }
 
   body {
