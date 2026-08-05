@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, RefreshCw, Package, Pencil, Check, X, ChevronDown } from 'lucide-react';
-import { api, Integration, FoodItem } from '@/lib/api';
+import Swal from 'sweetalert2';
+import { ArrowLeft, RefreshCw, Package, Pencil, Check, X, ChevronDown, FolderPlus, PackagePlus } from 'lucide-react';
+import { api, Integration, FoodItem, FoodCategory } from '@/lib/api';
 import { isAdmin } from '@/lib/auth';
 import { toastError, toastSuccess } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
@@ -15,13 +16,26 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 
 const UNCATEGORIZED = 'Sem categoria';
 
-function groupByCategory(items: FoodItem[]) {
+// Categorias recém-criadas ainda sem item nunca aparecem em `items` (listItems achata
+// catalogs→categories→items) — sem mesclar `allCategories` aqui elas ficam invisíveis
+// tanto na accordion quanto no dropdown de "Novo item" (nunca dá pra popular a categoria).
+function groupByCategory(items: FoodItem[], allCategories: FoodCategory[]) {
   const groups = new Map<string, { name: string; categoryId: string | null; status: string | null; items: FoodItem[] }>();
   for (const item of items) {
     const key = item.categoryId ?? item.categoryName ?? UNCATEGORIZED;
     const name = item.categoryName ?? UNCATEGORIZED;
     if (!groups.has(key)) groups.set(key, { name, categoryId: item.categoryId, status: item.categoryStatus, items: [] });
     groups.get(key)!.items.push(item);
+  }
+  for (const category of allCategories) {
+    if (!groups.has(category.id)) {
+      groups.set(category.id, {
+        name: category.name,
+        categoryId: category.id,
+        status: (category.status as string | undefined) ?? null,
+        items: [],
+      });
+    }
   }
   return [...groups.entries()].map(([key, group]) => ({ key, ...group }));
 }
@@ -39,6 +53,8 @@ export default function FoodItemsPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [items, setItems] = useState<FoodItem[]>([]);
+  const [allCategories, setAllCategories] = useState<FoodCategory[]>([]);
+  const [catalogId, setCatalogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchingItems, setFetchingItems] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,12 +81,18 @@ export default function FoodItemsPage() {
   const selected = integrations.find((i) => i.id === selectedId);
 
   const loadItems = useCallback(async () => {
-    if (!selected) { setItems([]); return; }
+    if (!selected) { setItems([]); setAllCategories([]); setCatalogId(null); return; }
     setFetchingItems(true);
     try {
       const platform = selected.marketplace as 'ifood' | 'uairango';
-      const list = await api.food.listItems(platform, selected.id);
+      const [list, catalogs] = await Promise.all([
+        api.food.listItems(platform, selected.id),
+        api.food.getCatalogs(platform, selected.id),
+      ]);
       setItems(list);
+      const id = catalogs[0]?.catalogId ?? null;
+      setCatalogId(id);
+      setAllCategories(id ? await api.food.getCategories(platform, selected.id, id) : []);
     } catch (err) {
       toastError(err instanceof Error ? err.message : 'Erro ao carregar itens');
     } finally {
@@ -80,7 +102,7 @@ export default function FoodItemsPage() {
 
   useEffect(() => { loadItems(); }, [loadItems]);
 
-  const categories = useMemo(() => groupByCategory(items), [items]);
+  const categories = useMemo(() => groupByCategory(items, allCategories), [items, allCategories]);
 
   function startEdit(item: FoodItem) {
     setEditingId(item.itemId);
@@ -123,15 +145,142 @@ export default function FoodItemsPage() {
     }
   }
 
-  async function toggleCategory(categoryId: string) {
+  async function createCategory() {
     if (!selected) return;
+    // Campos da categoria confirmados via doc oficial (postman.json, GET categories):
+    // id, index, name, template, externalCode, status, items — "template" fica fixo em
+    // DEFAULT (PIZZA só é criado automaticamente pela API junto com um item do tipo PIZZA,
+    // não é algo que o lojista escolhe manualmente aqui).
+    const { value: form } = await Swal.fire({
+      title: 'Nova categoria',
+      html: `
+        <input id="food-category-name" class="swal2-input" style="width:100%;margin:0 0 10px 0" placeholder="Nome da categoria (ex.: Bebidas)">
+        <input id="food-category-sku" class="swal2-input" style="width:100%;margin:0 0 10px 0" placeholder="Código externo (opcional)">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 2px">
+          <input id="food-category-available" type="checkbox" checked style="width:16px;height:16px">
+          Criar já disponível
+        </label>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Criar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const name = (document.getElementById('food-category-name') as HTMLInputElement | null)?.value.trim() ?? '';
+        const sku = (document.getElementById('food-category-sku') as HTMLInputElement | null)?.value.trim() ?? '';
+        const available = (document.getElementById('food-category-available') as HTMLInputElement | null)?.checked ?? true;
+        if (!name) {
+          Swal.showValidationMessage('Informe um nome');
+          return false;
+        }
+        return { name, sku, available };
+      },
+    });
+    if (!form) return;
+    try {
+      const platform = selected.marketplace as 'ifood' | 'uairango';
+      const catalogs = await api.food.getCatalogs(platform, selected.id);
+      const catalogId = catalogs[0]?.catalogId;
+      if (!catalogId) { toastError('Nenhum catálogo encontrado para esta loja'); return; }
+      await api.food.createCategory(platform, selected.id, catalogId, {
+        name: form.name,
+        status: form.available ? 'AVAILABLE' : 'UNAVAILABLE',
+        template: 'DEFAULT',
+        ...(form.sku ? { externalCode: form.sku } : {}),
+      });
+      toastSuccess('Categoria criada');
+      await loadItems();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Erro ao criar categoria');
+    }
+  }
+
+  async function createItem() {
+    if (!selected) return;
+    const categoryOptions = categories
+      .filter((c) => c.categoryId)
+      .map((c) => `<option value="${c.categoryId}">${c.name}</option>`)
+      .join('');
+    if (!categoryOptions) {
+      toastError('Crie uma categoria antes de adicionar um item');
+      return;
+    }
+    const { value: form } = await Swal.fire({
+      title: 'Novo item',
+      html: `
+        <select id="food-item-category" class="swal2-input" style="width:100%;margin:0 0 10px 0">${categoryOptions}</select>
+        <input id="food-item-name" class="swal2-input" style="width:100%;margin:0 0 10px 0" placeholder="Nome do item">
+        <input id="food-item-sku" class="swal2-input" style="width:100%;margin:0 0 10px 0" placeholder="SKU (código externo, opcional)">
+        <input id="food-item-price" class="swal2-input" style="width:100%;margin:0" placeholder="Preço (ex.: 5,00)" inputmode="numeric">
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Criar',
+      cancelButtonText: 'Cancelar',
+      didOpen: () => {
+        const priceInput = document.getElementById('food-item-price') as HTMLInputElement | null;
+        priceInput?.addEventListener('input', () => {
+          const digits = priceInput.value.replace(/\D/g, '') || '0';
+          priceInput.value = (Number(digits) / 100).toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+        });
+      },
+      preConfirm: () => {
+        const categoryId = (document.getElementById('food-item-category') as HTMLSelectElement | null)?.value ?? '';
+        const name = (document.getElementById('food-item-name') as HTMLInputElement | null)?.value.trim() ?? '';
+        const sku = (document.getElementById('food-item-sku') as HTMLInputElement | null)?.value.trim() ?? '';
+        const priceRaw = (document.getElementById('food-item-price') as HTMLInputElement | null)?.value ?? '';
+        const price = Number(priceRaw.replace(/\./g, '').replace(',', '.'));
+        if (!name || !Number.isFinite(price) || price < 0) {
+          Swal.showValidationMessage('Preencha o nome e um preço válido');
+          return false;
+        }
+        return { categoryId, name, sku, price };
+      },
+    });
+    if (!form) return;
+    try {
+      const platform = selected.marketplace as 'ifood' | 'uairango';
+      // UaiRango exige item.type ("DEFAULT"/"PIZZA", nunca "ITEM") e item.productId
+      // apontando pra um product com o mesmo id no array `products` (doc oficial,
+      // Postman: PUT /catalog/v2.0/merchants/{merchantId}/items) — os ids são
+      // gerados no cliente, a API não os cria sozinha.
+      const productId = crypto.randomUUID();
+      await api.food.upsertItem(platform, selected.id, {
+        item: {
+          id: crypto.randomUUID(),
+          categoryId: form.categoryId,
+          productId,
+          type: 'DEFAULT',
+          status: 'AVAILABLE',
+          price: { value: form.price },
+          ...(form.sku ? { externalCode: form.sku } : {}),
+        },
+        products: [
+          {
+            id: productId,
+            name: form.name,
+            status: 'AVAILABLE',
+            ...(form.sku ? { externalCode: form.sku } : {}),
+          },
+        ],
+      });
+      toastSuccess('Item criado');
+      await loadItems();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Erro ao criar item');
+    }
+  }
+
+  async function toggleCategory(categoryId: string) {
+    if (!selected || !catalogId) return;
     const category = categories.find((c) => c.categoryId === categoryId);
     if (!category) return;
     const nextStatus = isAvailable(category.status ?? '') ? 'UNAVAILABLE' : 'AVAILABLE';
     setSavingCategoryId(categoryId);
     try {
       const platform = selected.marketplace as 'ifood' | 'uairango';
-      await api.food.updateCategoryStatus(platform, selected.id, categoryId, nextStatus);
+      await api.food.updateCategoryStatus(platform, selected.id, catalogId, categoryId, nextStatus);
       toastSuccess(nextStatus === 'AVAILABLE' ? 'Categoria disponível' : 'Categoria indisponível');
       await loadItems();
     } catch (err) {
@@ -159,16 +308,24 @@ export default function FoodItemsPage() {
             Selecione uma integração, liste os itens do catálogo e altere preço/estoque.
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 ml-auto"
-          onClick={loadItems}
-          disabled={fetchingItems || !selected}
-          title="Recarregar itens"
-        >
-          <RefreshCw className={fetchingItems ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
-        </Button>
+        <div className="ml-auto flex items-center gap-1.5">
+          <Button variant="outline" size="sm" onClick={createCategory} disabled={!selected}>
+            <FolderPlus className="w-3.5 h-3.5 mr-1.5" /> Nova categoria
+          </Button>
+          <Button variant="outline" size="sm" onClick={createItem} disabled={!selected}>
+            <PackagePlus className="w-3.5 h-3.5 mr-1.5" /> Novo item
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={loadItems}
+            disabled={fetchingItems || !selected}
+            title="Recarregar itens"
+          >
+            <RefreshCw className={fetchingItems ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
+          </Button>
+        </div>
       </div>
 
       {integrations.length === 0 ? (
@@ -196,7 +353,7 @@ export default function FoodItemsPage() {
 
           {fetchingItems ? (
             <div className="text-muted-foreground text-sm">Carregando itens...</div>
-          ) : items.length === 0 ? (
+          ) : categories.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="py-8 text-center text-muted-foreground text-sm">
                 Nenhum item no catálogo desta integração.
