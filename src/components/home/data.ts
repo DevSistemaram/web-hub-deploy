@@ -134,26 +134,26 @@ export function whatsappPlanLink(plan: string) {
 
 export const PLANS = [
   {
-    name: 'Até 500 pedidos/mês',
+    name: '',//Até 500 pedidos/mês
     price: 'R$ 350',
     period: '/mês',
     description: 'Todos os canais somados.',
     highlight: false,
   },
-  {
-    name: '501 a 1.000 pedidos/mês',
-    price: 'R$ 650',
-    period: '/mês',
-    description: 'Ao dobrar o volume, o custo não dobra.',
-    highlight: true,
-  },
-  {
-    name: 'Acima de 1.000 pedidos',
-    price: 'Sob consulta',
-    period: '',
-    description: 'Valores negociados de forma personalizada, garantindo sempre a melhor condição.',
-    highlight: false,
-  },
+  // {
+  //   name: '501 a 1.000 pedidos/mês',
+  //   price: 'R$ 650',
+  //   period: '/mês',
+  //   description: 'Ao dobrar o volume, o custo não dobra.',
+  //   highlight: true,
+  // },
+  // {
+  //   name: 'Acima de 1.000 pedidos',
+  //   price: 'Sob consulta',
+  //   period: '',
+  //   description: 'Valores negociados de forma personalizada, garantindo sempre a melhor condição.',
+  //   highlight: false,
+  // },
 ];
 
 export const FAQ_ITEMS = [

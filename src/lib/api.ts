@@ -154,6 +154,7 @@ export interface FoodOrder {
     zipCode: string;
     country: string;
   } | null;
+  observations: string | null;
   paymentMethod: string | null;
   merchantId: string | null;
   merchantName: string | null;
@@ -168,6 +169,30 @@ export interface FoodOrder {
 export interface FoodCancellationReason {
   cancelCodeId: number;
   description: string;
+}
+
+export interface FoodMerchantDetails {
+  id: string;
+  name: string;
+  corporateName?: string | null;
+  [key: string]: unknown;
+}
+
+export interface FoodMerchantStatus {
+  available: boolean;
+  [key: string]: unknown;
+}
+
+export interface FoodCatalog {
+  catalogId: string;
+  [key: string]: unknown;
+}
+
+export interface FoodCategory {
+  id: string;
+  name: string;
+  status?: string | null;
+  [key: string]: unknown;
 }
 
 export interface FoodItem {
@@ -452,6 +477,9 @@ export const api = {
       return request<FoodOrder[]>(`/food/orders${suffix}`);
     },
     getOrder: (id: string) => request<FoodOrder>(`/food/orders/${id}`),
+    // Re-busca o pedido na plataforma agora — útil pra pedidos parados (sem evento novo)
+    // cujo payload local ficou congelado numa forma antiga (ex.: sem campo adicionado depois).
+    refreshOrder: (id: string) => request<FoodOrder>(`/food/orders/${id}/refresh`, { method: 'POST' }),
     updateOrderStatus: (id: string, action: FoodOrderAction, params?: FoodOrderActionParams) =>
       request<{ success: boolean; status: FoodOrderStatus }>(`/food/orders/${id}/status`, {
         method: 'POST',
@@ -472,10 +500,39 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ integrationId, payload: { itemId, status } }),
       }),
-    updateCategoryStatus: (platform: FoodPlatform, integrationId: string, categoryId: string, status: 'AVAILABLE' | 'UNAVAILABLE') =>
-      request(`/food/${platform}/catalog/categories/status`, {
+    updateCategoryStatus: (
+      platform: FoodPlatform,
+      integrationId: string,
+      catalogId: string,
+      categoryId: string,
+      status: 'AVAILABLE' | 'UNAVAILABLE',
+    ) =>
+      request(`/food/${platform}/catalog/categories/${catalogId}/${categoryId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ integrationId, payload: { status } }),
+      }),
+    getCatalogs: (platform: FoodPlatform, integrationId: string) =>
+      request<FoodCatalog[]>(`/food/${platform}/catalog/catalogs?integrationId=${integrationId}`),
+    getCategories: (platform: FoodPlatform, integrationId: string, catalogId: string) =>
+      request<FoodCategory[]>(`/food/${platform}/catalog/categories/${catalogId}?integrationId=${integrationId}`),
+    createCategory: (platform: FoodPlatform, integrationId: string, catalogId: string, payload: Record<string, unknown>) =>
+      request(`/food/${platform}/catalog/categories/${catalogId}`, {
+        method: 'POST',
+        body: JSON.stringify({ integrationId, payload }),
+      }),
+    upsertItem: (platform: FoodPlatform, integrationId: string, payload: Record<string, unknown>) =>
+      request(`/food/${platform}/catalog/items`, {
         method: 'PUT',
-        body: JSON.stringify({ integrationId, payload: { categoryId, status } }),
+        body: JSON.stringify({ integrationId, payload }),
+      }),
+    getMerchantDetails: (platform: FoodPlatform, integrationId: string) =>
+      request<FoodMerchantDetails>(`/food/${platform}/merchant?integrationId=${integrationId}`),
+    getMerchantStatus: (platform: FoodPlatform, integrationId: string) =>
+      request<FoodMerchantStatus>(`/food/${platform}/merchant/status?integrationId=${integrationId}`),
+    updateMerchantStatus: (platform: FoodPlatform, integrationId: string, payload: Record<string, unknown>) =>
+      request(`/food/${platform}/merchant/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ integrationId, payload }),
       }),
   },
   vendas: {

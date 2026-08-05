@@ -23,7 +23,7 @@ export function Pricing() {
               className={
                 highlight
                   ? 'relative border-[hsl(var(--accent-warm))] shadow-lg lg:scale-105'
-                  : 'transition hover:border-primary/40 hover:shadow-md'
+                  : 'transition hover:border-primary/40 hover:shadow-md' + ' sm:col-start-2'
               }
             >
               {highlight && (
