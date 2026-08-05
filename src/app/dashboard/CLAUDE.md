@@ -18,7 +18,9 @@ Todas as rotas aqui são protegidas. A guarda de autenticação vive no `layout.
 
 ### page.tsx — Dashboard Overview
 
-Carrega `api.integrations.list()` no mount e exibe três cards de status (Mercado Livre, Shopee, Token ERP). Se alguma integração estiver desconectada, exibe alerta com link para `/dashboard/integrations`. Usa um sub-componente inline `StatusCard` (não exportado).
+Carrega `api.integrations.list()` no mount e exibe:
+- Um card de status linkando para `/dashboard/integrations`, com a contagem de integrações ativas e um `Badge` por marketplace (verde se conectado, outline caso contrário), agrupados pelas mesmas categorias de `integrations/page.tsx` (Marketplace, Catálogo, Hubs, Food) — cobre os marketplaces suportados (`Integration['marketplace']` em `@/lib/api`), exceto `zedeliver` (Zé Delivery), que está marcado como "em breve" (`comingSoon: true` em `integrations/page.tsx`) e não aparece na Visão Geral.
+- Uma seção "Atalhos" com `IconCard` (`@/components/ui/icon-card`) para Vendas, Integrações e Token ERP; o atalho Admin só aparece se `isAdmin()` (`@/lib/auth`) for `true`.
 
 ### Subpastas
 
