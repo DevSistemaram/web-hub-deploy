@@ -401,6 +401,11 @@ export const api = {
       request<ShopeeShopInfo>(`/admin/integrations/${integrationId}/shopee-info`),
     getShopeeOnboarding: (integrationId: string) =>
       request<ShopeeBrOnboardingInfo>(`/admin/integrations/${integrationId}/shopee-onboarding`),
+    testConnection: (integrationId: string) =>
+      request<{ success: boolean; message: string; checkedAt: string }>(
+        `/admin/integrations/${integrationId}/test-connection`,
+        { method: 'POST' },
+      ),
   },
   integrations: {
     list: () => request<Integration[]>('/integrations'),
