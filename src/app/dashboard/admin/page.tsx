@@ -10,7 +10,7 @@ import {
 import Link from 'next/link';
 import { api, Invitation, AdminUser, Integration, ShopeeShopInfo, ShopeeBrOnboardingInfo } from '@/lib/api';
 import { isAdmin, startImpersonation, getUser } from '@/lib/auth';
-import { confirm, toastError } from '@/lib/swal';
+import { confirm, toastError, toastSuccess } from '@/lib/swal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -42,7 +42,28 @@ function tokenStatus(expiresAt: string | null): { label: string; variant: 'succe
   return { label: `Expira em ${days}d`, variant: 'success' };
 }
 
-function TokenBadge({ expiresAt }: { expiresAt: string | null }) {
+// Alguns marketplaces reaproveitam a coluna refreshToken para algo que não é um
+// refresh token OAuth de verdade (private key estática, client_credentials) ou
+// simplesmente nunca emitem um — nesses casos a expiração fica sempre null por
+// design, e o motivo precisa ficar explícito em vez de aparecer em branco.
+function refreshTokenNote(marketplace: string): string | null {
+  switch (marketplace) {
+    case 'nuvemshop': return 'Token permanente';
+    case 'ideris': return 'Chave estática (não expira)';
+    case 'zedeliver': return 'Client credentials (não expira)';
+    default: return null;
+  }
+}
+
+function TokenBadge({ expiresAt, note }: { expiresAt: string | null; note?: string | null }) {
+  if (!expiresAt && note) {
+    return (
+      <div className="flex flex-col gap-0.5">
+        <Badge variant="success" className="text-[10px] py-0 px-1.5 w-fit">{note}</Badge>
+      </div>
+    );
+  }
+
   const st = tokenStatus(expiresAt);
   return (
     <div className="flex flex-col gap-0.5">
@@ -171,8 +192,20 @@ function ShopeeJsonModal({ entry, onClose }: { entry: ShopeeModalEntry; onClose:
 
 function IntegrationTable({ integrations }: { integrations: Integration[] }) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [testingId, setTestingId] = useState<string | null>(null);
   const [modalEntry, setModalEntry] = useState<ShopeeModalEntry | null>(null);
   const [cache, setCache] = useState<Record<string, ShopeeModalEntry>>({});
+
+  async function handleTestConnection(id: string, label: string) {
+    setTestingId(id);
+    try {
+      const result = await api.admin.testConnection(id);
+      if (result.success) toastSuccess(`${label}: ${result.message}`);
+      else toastError(`${label}: ${result.message}`);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : `${label}: erro ao testar integração`);
+    } finally { setTestingId(null); }
+  }
 
   async function handleShopeeInfo(id: string, label: string) {
     if (cache[id]) { setModalEntry(cache[id]); return; }
@@ -236,23 +269,38 @@ function IntegrationTable({ integrations }: { integrations: Integration[] }) {
                     <span className="text-muted-foreground">{MARKETPLACE_LABEL[int.marketplace] ?? int.marketplace}</span>
                   </td>
                   <td className="py-2 px-2"><TokenBadge expiresAt={int.tokenExpiresAt} /></td>
-                  <td className="py-2 px-2"><TokenBadge expiresAt={int.refreshTokenExpiresAt} /></td>
+                  <td className="py-2 px-2"><TokenBadge expiresAt={int.refreshTokenExpiresAt} note={refreshTokenNote(int.marketplace)} /></td>
                   <td className="py-2 px-2">
-                    {int.marketplace === 'shopee' && (
+                    <div className="flex items-center gap-1">
                       <button
-                        onClick={() => handleShopeeInfo(int.id, label)}
-                        disabled={loadingId === int.id}
-                        title="Ver informações da loja Shopee"
+                        onClick={() => handleTestConnection(int.id, label)}
+                        disabled={testingId === int.id}
+                        title="Testar integração"
                         className={cn(
                           'flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium transition-colors',
                           'border-border text-muted-foreground hover:text-foreground hover:bg-accent',
-                          loadingId === int.id && 'opacity-50 pointer-events-none',
+                          testingId === int.id && 'opacity-50 pointer-events-none',
                         )}
                       >
-                        <Info className="w-3 h-3" />
-                        {loadingId === int.id ? '...' : 'Info'}
+                        <RefreshCw className={cn('w-3 h-3', testingId === int.id && 'animate-spin')} />
+                        {testingId === int.id ? '...' : 'Testar'}
                       </button>
-                    )}
+                      {int.marketplace === 'shopee' && (
+                        <button
+                          onClick={() => handleShopeeInfo(int.id, label)}
+                          disabled={loadingId === int.id}
+                          title="Ver informações da loja Shopee"
+                          className={cn(
+                            'flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium transition-colors',
+                            'border-border text-muted-foreground hover:text-foreground hover:bg-accent',
+                            loadingId === int.id && 'opacity-50 pointer-events-none',
+                          )}
+                        >
+                          <Info className="w-3 h-3" />
+                          {loadingId === int.id ? '...' : 'Info'}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
