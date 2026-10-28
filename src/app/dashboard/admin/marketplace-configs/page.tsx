@@ -28,6 +28,20 @@ const MARKETPLACE_META: Record<SupportedMarketplace, { label: string; image: str
   amazon: { label: 'Amazon', image: '/amazon.svg' },
 };
 
+// URL pública que o marketplace chama (webhook). Aponta para a API, não para o portal.
+function webhookUrl(marketplace: SupportedMarketplace, path = '') {
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL || (typeof window === 'undefined' ? '' : window.location.origin);
+  return `${base.replace(/\/$/, '')}/api/webhooks/${marketplace}${path}`;
+}
+
+// Campos de URL de webhook pedidos pelo Portal de Parceiros da Nuvemshop.
+const NUVEMSHOP_WEBHOOKS = [
+  { label: 'URL do Webhook (eventos: pedidos, app…)', path: '' },
+  { label: 'URL webhook store redact', path: '/store-redact' },
+  { label: 'URL webhook customers redact', path: '/customers-redact' },
+  { label: 'URL webhook customers data request', path: '/customers-data-request' },
+] as const;
+
 function defaultRedirectUri(marketplace: MarketplaceConfig['marketplace']) {
   if (typeof window === 'undefined') return '';
   return `${window.location.origin}/dashboard/integrations/${marketplace}/callback`;
@@ -106,6 +120,15 @@ export default function MarketplaceConfigsPage() {
     try {
       await navigator.clipboard.writeText(defaultRedirectUri(mp));
       toastSuccess('Redirect URI copiada');
+    } catch {
+      toastError('Não foi possível copiar');
+    }
+  }
+
+  async function handleCopyWebhookUrl(mp: SupportedMarketplace, path = '') {
+    try {
+      await navigator.clipboard.writeText(webhookUrl(mp, path));
+      toastSuccess('URL do webhook copiada');
     } catch {
       toastError('Não foi possível copiar');
     }
@@ -308,6 +331,39 @@ export default function MarketplaceConfigsPage() {
                       </Button>
                     </div>
                   </div>
+
+                  {mp === 'nuvemshop' && (
+                    <div className="space-y-3">
+                      {NUVEMSHOP_WEBHOOKS.map(({ label, path }) => (
+                        <div key={path || 'default'}>
+                          <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
+                          <div className="flex gap-1">
+                            <Input
+                              readOnly
+                              value={webhookUrl(mp, path)}
+                              className="h-8 text-sm bg-muted/40"
+                              onFocus={(e) => e.currentTarget.select()}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              title={`Copiar ${label}`}
+                              onClick={() => handleCopyWebhookUrl(mp, path)}
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      {!webhookUrl(mp).startsWith('https://') && (
+                        <p className="text-[11px] text-amber-600">
+                          A Nuvemshop não aceita localhost nem http: use a URL pública (HTTPS) da API.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {mp === 'shopee' && (
                     <>

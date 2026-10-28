@@ -135,7 +135,7 @@ export function whatsappPlanLink(plan: string) {
 export const PLANS = [
   {
     name: '',//Até 500 pedidos/mês
-    price: 'R$ 350',
+    price: 'R$ 175',
     period: '/mês',
     description: 'Todos os canais somados.',
     highlight: false,
